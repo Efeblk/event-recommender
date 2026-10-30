@@ -1,8 +1,14 @@
 # Bi' Plan
 
-Bi' Plan finds Istanbul events from Turkish and English requests.
-Use [the v1 product plan](docs/product-plan-v1.md) for scope and acceptance checks.
-Use [the v1 architecture](docs/architecture.md) for the current data flow.
+Bi' Plan is a Google ADK agent that plans Istanbul outings from Turkish and
+English requests. It finds correct, bookable events, plans the route between
+venues and saves plans for the user.
+Use [the project plan](docs/project-plan.md) for scope, sprints and acceptance checks.
+Use [the architecture](docs/architecture.md) for the target system and the current data flow.
+
+The agent layer is not built yet. Sprint 1 adds it. The sections below
+describe the current search application, which becomes the agent's
+`search_events` tool.
 
 The application runs on Node in GCP Cloud Run.
 Firestore holds catalog pointers, leases and request limits.

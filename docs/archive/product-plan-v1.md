@@ -1,5 +1,9 @@
 # Bi' Plan product plan: v1 and v2 ranking
 
+> **Archived 2026-10-30.** [The project plan](../project-plan.md) replaces this
+> plan. Its search correctness rules still apply to the `search_events` tool.
+> The status log below is kept as history.
+
 Owner: the user. Written 2026-10-03. This plan has priority over older plans,
 reports and runbooks in `docs/`. If `AGENTS.md` conflicts with this plan, follow
 this plan and record the conflict in the status log at the end.

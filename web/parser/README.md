@@ -18,7 +18,7 @@ The current flow is:
 3. A stated field that code cannot resolve returns a clarification. Search does
    not silently drop it.
 4. The resulting plan goes to source-evidence checks and full-catalog
-   retrieval. See the [v1 architecture](../../docs/architecture.md).
+   retrieval. See the [architecture](../../docs/architecture.md).
 
 Without Jev configuration, `lib/interpreter-config.ts` selects the rules
 fallback. An explicit `INPUT_INTERPRETER` value can select a legacy interpreter,
