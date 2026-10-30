@@ -23,8 +23,12 @@ Cloud Run job: collector (scheduled) → catalog snapshot (Cloud Storage + Fires
 
 - `web/agent/` holds the ADK agent, its instruction and the tool definitions.
   Each tool has an input schema and returns typed data.
-- The ADK session service stores conversation state in Firestore. Users,
-  plans and favorites are Firestore collections keyed by the Firebase user ID.
+- The ADK session service stores conversation state. Sprint 1 keeps sessions
+  in process memory (`BoundedSessionService`). Sprint 2 moves them to
+  Firestore. Users, plans and favorites are Firestore collections keyed by
+  the Firebase user ID.
+- `web/lib/search-deps.ts` builds the search dependencies for both
+  `/api/recommend` and `search_events`.
 - `/api/agent` streams agent events. The UI renders text from the model and
   renders event cards only from tool results.
 - Guardrails: message length and rate limits before the agent runs, schema

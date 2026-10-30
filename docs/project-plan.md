@@ -186,3 +186,7 @@ production URL.
   Guidelines". The v1 product plan moved to `docs/archive/`. Decisions:
   TypeScript ADK, Gemini runs the agent, Jev and Voyage stay inside
   `search_events`. Features F1–F4, F5 stretch. Documents only, no code changes.
+- 2026-10-30: PR #7 merged. Sprint 1 code: ADK 2.4.0 root agent with
+  `search_events` and `get_event_details`, `/api/agent` NDJSON stream and the
+  `/plan` chat. Tests use a scripted model. No Gemini key yet, so no live run.
+  GCP deployment move is still open.

@@ -477,6 +477,7 @@ export default function Home() {
           bi’ plan<span>✳</span>
         </Link>
         <nav aria-label="Ana menü">
+          <Link href="/plan">Plan asistanı</Link>
           <a href="#etkinlikler">Etkinlikler</a>
           <a href="#destek">Destek ol</a>
         </nav>
