@@ -992,3 +992,42 @@ footer small {
   position: sticky;
   bottom: 0.75rem;
 }
+.auth-control {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.85rem;
+}
+.auth-name {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+}
+.saved-section {
+  display: grid;
+  gap: 0.75rem;
+}
+.saved-section h2 {
+  font-size: 1.25rem;
+  font-weight: 600;
+}
+.saved-plan ol {
+  display: grid;
+  gap: 0.6rem;
+  padding-left: 1.1rem;
+  list-style: decimal;
+}
+.saved-plan li {
+  display: grid;
+  gap: 0.15rem;
+}
+.saved-leg {
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+.saved-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: center;
+}

@@ -2,6 +2,7 @@ import { runtime } from '@/lib/store';
 import { jevConfigFrom } from '@/lib/jev';
 import { inputInterpreterFrom } from '@/lib/interpreter-config';
 import { requestLogEnabled } from '@/lib/request-log';
+import { firebaseWebConfigFrom } from '@/lib/auth';
 
 export async function GET() {
   let donationUrl: string | null = null;
@@ -20,6 +21,8 @@ export async function GET() {
     {
       donationUrl,
       requestLog: requestLogEnabled(configuredRuntime),
+      // Public Firebase web settings. Null keeps sign-in off.
+      firebase: firebaseWebConfigFrom(configuredRuntime),
       intentVersion:
         inputInterpreterFrom(
           configuredRuntime,

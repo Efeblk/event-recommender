@@ -73,6 +73,7 @@ try {
     donationUrl: null,
     requestLog: false,
     intentVersion: 1,
+    firebase: null,
   });
   assert.equal(
     (await fetch(`${origin}/api/health`)).status,

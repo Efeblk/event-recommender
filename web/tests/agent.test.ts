@@ -156,7 +156,7 @@ await test('one agent turn searches the real pipeline and shows cards only from 
   const events = await collect(
     agentTurnStream({
       input: { sessionId: 'session-123', message: 'Cumartesi 800 TL altında konser' },
-      userId: 'anonymous',
+      userId: null,
       model,
       sessionService: new InMemorySessionService(),
       tools: {
@@ -198,7 +198,7 @@ await test('invalid tool arguments do not reach the search pipeline', async () =
   const events = await collect(
     agentTurnStream({
       input: { sessionId: 'session-456', message: 'merhaba' },
-      userId: 'anonymous',
+      userId: null,
       model,
       sessionService: new InMemorySessionService(),
       tools: {
@@ -220,7 +220,7 @@ await test('a failing model ends the stream with an error and done', async () =>
   const events = await collect(
     agentTurnStream({
       input: { sessionId: 'session-789', message: 'konser' },
-      userId: 'anonymous',
+      userId: null,
       model,
       sessionService: new InMemorySessionService(),
       tools: {

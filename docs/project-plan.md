@@ -190,3 +190,8 @@ production URL.
   `search_events` and `get_event_details`, `/api/agent` NDJSON stream and the
   `/plan` chat. Tests use a scripted model. No Gemini key yet, so no live run.
   GCP deployment move is still open.
+- 2026-10-30: PR #8 merged (Sprint 1). Sprint 2 code: `plan_outing`,
+  `plan_route` (Maps Routes), `get_weather` (Open-Meteo), saved plans and
+  favorites with Firebase Auth and Firestore, Firestore ADK sessions, `/saved`
+  page with `.ics` export, per-user limits. Tests use a scripted model and
+  fake fetchers. No Gemini, Maps or Firebase keys yet, so no live run.

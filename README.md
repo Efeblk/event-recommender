@@ -73,6 +73,13 @@ The root ADK `LlmAgent` (`web/agent/agent.ts`) uses Gemini and these tools:
 - `search_events`: the checked search pipeline below. The agent sends one
   complete request each time, so the pipeline stays stateless.
 - `get_event_details`: current catalog records for event IDs.
+- `plan_outing`: orders 2–6 events, adds travel legs and finds overlap,
+  travel and different-day conflicts in code. Durations are estimates.
+- `plan_route`: travel time between two events from the Google Maps Routes
+  API. At most 6 route calls per turn. Results are cached.
+- `get_weather`: the Open-Meteo forecast for a date and district (no key).
+- `save_plan`, `list_plans`, `save_favorite`: saved data for a signed-in user.
+  Visitors get `sign_in_required`.
 
 Configure Gemini with one of these:
 
@@ -85,7 +92,27 @@ Configure Gemini with one of these:
 Gemini settings, `/api/agent` returns 503 with code `agent_unavailable`.
 Each turn has a 60 s limit and at most 8 model calls. The route uses the same
 body limit, visitor rate limit, daily AI limit and catalog check as search.
-Sessions stay in process memory until the Firestore session store exists.
+
+Other settings. Each feature turns off safely when its setting is missing:
+
+- `GOOGLE_MAPS_API_KEY`: travel times. Without it, legs have status `unavailable`.
+- `FIREBASE_WEB_API_KEY`, `FIREBASE_PROJECT_ID` and `FIREBASE_AUTH_DOMAIN`:
+  Google and guest sign-in. Without them, the UI hides sign-in. The server
+  checks Firebase ID tokens (RS256, Google certificates) and sets per-user
+  limits of 6 turns per minute and 60 per hour.
+- `GCP_STORAGE_BUCKET` and `BIPLAN_GCP_PROJECT`: Firestore for saved data and
+  agent sessions. Without them, both stay in process memory.
+  `DEPLOYMENT_ENV` sets the namespace (`envs/{env}/...`).
+
+Firestore paths are `envs/{env}/users/{uid}/plans/{id}`,
+`envs/{env}/users/{uid}/favorites/{eventId}` and
+`envs/{env}/agentSessions/{hash}`. Sessions keep at most 60 events and
+expire after 7 days. Add a Firestore TTL policy on the `expiresAt` field of
+`agentSessions`.
+
+Signed-in users have **/saved** for plans and favorites, with `.ics` calendar
+export. The API is `GET|DELETE /api/me/plans` and `GET|POST|DELETE
+/api/me/favorites`. Each call needs `Authorization: Bearer <Firebase ID token>`.
 
 ## Search
 
