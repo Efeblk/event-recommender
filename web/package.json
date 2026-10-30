@@ -1,0 +1,67 @@
+{
+  "name": "biplan",
+  "version": "0.1.0",
+  "private": true,
+  "engines": {
+    "node": ">=22.13.0"
+  },
+  "scripts": {
+    "dev": "vinext dev",
+    "build": "npm run build:node",
+    "build:node": "node scripts/build-node.mjs",
+    "start": "npm run start:node",
+    "start:node": "node dist-node/server.js",
+    "lint": "oxlint",
+    "format": "oxfmt",
+    "test": "node --experimental-strip-types --test tests/*.test.ts",
+    "test:smoke": "npm run test:smoke:node",
+    "typecheck": "tsc --noEmit",
+    "data:refresh": "node --experimental-strip-types scripts/refresh.ts",
+    "local:setup": "node scripts/local-setup.mjs",
+    "local:start": "node scripts/local-start.mjs",
+    "local:refresh": "node scripts/local-refresh.mjs",
+    "embeddings:index": "node scripts/index-embeddings.mjs",
+    "test:deploy-config": "node --experimental-strip-types --test deploy/*.test.mjs",
+    "test:browser": "playwright test",
+    "test:smoke:node": "node scripts/smoke-node.mjs",
+    "test:deploy:gcp": "node scripts/check-gcp-deploy-config.mjs",
+    "test:input-intent": "node --experimental-strip-types scripts/check-input-intent.mjs",
+    "test:golden": "node --experimental-strip-types scripts/golden-run.ts",
+    "eval:plan": "node --experimental-strip-types scripts/plan-eval.ts"
+  },
+  "dependencies": {
+    "@base-ui/react": "1.7.0",
+    "@google-cloud/firestore": "9.2.0",
+    "@google-cloud/storage": "8.3.0",
+    "class-variance-authority": "0.7.1",
+    "clsx": "2.1.1",
+    "lucide-react": "1.31.0",
+    "pg": "8.23.0",
+    "react": "19.2.8",
+    "react-dom": "19.2.8",
+    "react-server-dom-webpack": "19.2.8",
+    "tailwind-merge": "3.6.0",
+    "tw-animate-css": "1.4.0",
+    "vinext": "1.0.0-beta.9"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.63.0",
+    "@tailwindcss/postcss": "4.2.1",
+    "@types/node": "22.19.19",
+    "@types/pg": "8.23.1",
+    "@types/react": "19.2.14",
+    "@types/react-dom": "19.2.3",
+    "@vitejs/plugin-react": "6.0.2",
+    "@vitejs/plugin-rsc": "0.5.34",
+    "oxfmt": "0.72.0",
+    "oxlint": "1.76.0",
+    "oxlint-tsgolint": "7.0.2001",
+    "tailwindcss": "4.2.1",
+    "typescript": "5.9.3",
+    "vite": "8.2.2"
+  },
+  "type": "module",
+  "imports": {
+    "#biplan/store": "./lib/store.node.ts"
+  }
+}
