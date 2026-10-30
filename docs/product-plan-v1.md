@@ -1,0 +1,1063 @@
+# Bi' Plan product plan: v1 and v2 ranking
+
+Owner: the user. Written 2026-10-03. This plan has priority over older plans,
+reports and runbooks in `docs/`. If `AGENTS.md` conflicts with this plan, follow
+this plan and record the conflict in the status log at the end.
+
+## Product definition
+
+**v1:** A user types a request in Turkish or English. Bi' Plan returns the
+relevant, correct and bookable Istanbul events. That is the complete v1 product.
+Each request is independent. One request produces one response. Do not use
+earlier requests, plans, filters, clarification text or shown event IDs.
+
+**v2:** Enrich the data so that the best events come first. The first v2 step is
+ranking and scoring the events.
+
+Everything else is out of scope until v1 is live. Out-of-scope work includes
+new providers, promotions, the PostgreSQL cutover, quality dimensions,
+capacity work beyond the beta load, and new architecture.
+
+## Current state (2026-10-03, `master` = `bad42d0`)
+
+What works:
+
+- Collection from Biletinial, Bubilet and Biletix through
+  `.github/workflows/gcp-collector.yml`. Scheduled collection is on, every 6 h
+  (`GCP_STAGING_COLLECTION_UNTIL=open`). The last run (37149121969) had
+  174 failed pages and a ready catalog with 8,502 eligible events.
+- Identity and merge: `collector/identity/resolve.ts` (`deterministic-identity.v5`).
+  In the last human test, all returned cards were correct and there were no
+  duplicate cards.
+- Request parsing: the field reader (`web/parser/fields.ts`) with the span-v2
+  plan protocol, and `web/lib/plan-evidence.ts` for hard constraints.
+- Retrieval: BM25 and Voyage vectors combined with reciprocal rank fusion
+  (`web/lib/hybrid.ts`). Then up to 16 candidates go to the Jev AI judge
+  (`web/lib/recommend.ts`, `web/lib/jev.ts`).
+- Staging: the private Cloud Run service `biplan-staging` (GCP project
+  `biplan-stg-efeblk` since 2026-10-22, region `us-central1`). You deploy it
+  with `gcp-staging.yml` and an approval gate.
+
+What does not work or is missing:
+
+- Semantic search covers only part of the catalog. Indexing is off
+  (`GCP_STAGING_INDEXING_ENABLED=false`) because no embedding budget is approved.
+- No alert is sent when a scheduled collection fails or the catalog goes stale.
+- The repository has two runtimes (Cloudflare and GCP), a half-done PostgreSQL
+  path and more than 40 documents in `docs/`. Agents spend time on this
+  machinery instead of on the product.
+- There is no fixed, repeatable relevance test set. Each test round uses new
+  queries, so the results of different rounds cannot be compared.
+
+## Working rules for the agent
+
+1. Work on one branch and one PR at a time from `master`. Merge it before you
+   start the next one. Do not create extra worktrees. Delete each branch after
+   its merge.
+2. Each phase below has acceptance checks. When the checks pass, the phase is
+   complete. Do not add extra evaluation rounds or unrelated improvements.
+   Record new unrelated issues in the "Later" list at the end of this file.
+3. Do not write new report documents. Update the status log at the end of
+   this file with short lines: date, PR or run ID, and result.
+4. Paid calls (TypeSafe/Jev, Voyage) need a budget that the user approves. Ask
+   once per phase, with a cost estimate. Deploys to staging and approval of the
+   `gcp-staging` gate are permitted for the steps in this plan.
+5. If you work for more than 2 hours with no merged PR, stop. Then write in the
+   status log what blocks you.
+6. Never print or commit secrets.
+
+## Phase 0: Simplify the repository (target: 2–3 days)
+
+Goal: the repository contains only what v1 uses, and agents get short and
+correct instructions.
+
+Tasks:
+
+1. Replace `AGENTS.md` with a short file (target: less than 80 lines). Keep the
+   working rules from this plan, the verification commands and the cost and
+   secret rules. Remove the long target-architecture text. Link to this plan.
+   Show the new file to the user before you merge it.
+2. Move old dated reports and plans from `docs/` to `docs/archive/`. Keep only
+   these files at the top level: `product-plan-v1.md`, `gcp-deployment.md`,
+   `gcp-collector.md` and one short `architecture.md` that describes the real
+   v1 flow (collect → identity → checkpoint → import → search). Fix the links.
+3. Remove the Cloudflare runtime: `deploy.yml`, `rollback.yml`, `collect.yml`,
+   `monitor.yml`, the Cloudflare parts of `web.yml`, `store.cloudflare.ts`,
+   `legacy-sync.cloudflare.ts`, the Wrangler configuration and the Cloudflare
+   build and smoke scripts. Keep all GCP tests green.
+4. Freeze the PostgreSQL path: remove the opt-in "Prepare replacement
+   PostgreSQL catalog" step from `gcp-collector.yml`, and remove the
+   `postgres-contracts` CI job if nothing on the v1 path uses it. Do not
+   delete the PostgreSQL code in this phase. Move it to a clearly named folder
+   or leave it, and record the decision in the status log.
+5. Stop uploading raw provider pages (`collector/state/raw/`) as public
+   workflow artifacts. The repository is public. Keep the small JSON reports.
+
+Acceptance:
+
+- CI is green on `master`.
+- A staging deploy and one collection succeed after the changes.
+- `/api/ready` returns 200.
+- `AGENTS.md` is short and the user accepted it.
+
+## Phase 1: Correct retrieval, measured (target: 1 week)
+
+Goal: show with a fixed test that a user request returns relevant and
+correct events.
+
+Tasks:
+
+1. **Golden set.** Create `web/fixtures/golden-v1.json` with 40 requests:
+   25 Turkish and 15 English. Include typos, dates ("bu akşam", "hafta sonu",
+   "ekim sonunda"), districts and sides, budgets, groups, categories, moods,
+   negations and two independent replacement requests. Use the earlier human-test
+   requests
+   (`span-parser-human-cases.test.ts`, `docs/archive/product-benchmark-2026-10-03.md`)
+   as a start. For each request, record the expected hard constraints. The
+   user reviews the 40 requests before the first scored run.
+2. **Frozen catalog.** Save one collection artifact (`state/events.json`) as
+   the test catalog. Use a fixed reference time. Keep large files out of git,
+   and record the run ID and hash.
+3. **Runner.** Create `web/scripts/golden-run.ts`. It runs every request
+   against the frozen catalog and writes, for each request, the top 10 cards,
+   their record IDs and the time taken. Cache the parser and Jev responses by
+   request text and catalog hash, so that a repeated run makes no paid calls.
+4. **Labels.** For each request, label the returned top 10 cards with
+   relevant, partly relevant or not relevant. Labels go in
+   `web/fixtures/golden-v1-labels.json`. The user labels or reviews a sample
+   of at least 10 requests. For an empty result, check the catalog to see
+   whether a matching event exists.
+5. **Embeddings.** Estimate the Voyage tokens and cost for all current
+   documents. Ask the user once. After approval, reset the indexing window
+   variables, clear the stuck `inFlight` reservation from run 37061051538 and
+   index the full catalog. Then remove the "partly ready" notice.
+6. **Fix batch.** Find the failures in the golden run. Group them by cause.
+   Fix them in one or two PRs. Then run the golden set again. Each later PR
+   that changes parsing, retrieval or merging must run the golden set.
+
+Acceptance (the v1 quality bar):
+
+- 0 hard-constraint violations (date, place, budget, category, negation, age)
+  in all top-10 lists.
+- 0 duplicate cards (the same session from different providers shown twice).
+- At least 85% of requests have a relevant card in the top 3.
+- Every empty result is correct: the frozen catalog has no matching event.
+- p95 end-to-end time below 8 s on staging, one request at a time.
+
+## Phase 1R: Rebuild request understanding (decided 2026-10-26)
+
+Goal: every hard condition is understood correctly and can be checked against
+event data. The hard test on 2026-10-26 (see the status log) found 21 of 60
+requests bad and 51 of 230 cards wrong. The causes are in the design, so this
+phase replaces parts instead of patching them. Collection, identity, vectors,
+hybrid retrieval, the Jev support check and the cards stay.
+
+Tasks, in this order. Each task is one PR.
+
+1. **Evaluation set (R1).** `web/fixtures/hard-v1.json` holds the 60
+   hard-test requests with expected plans (hard atoms, exclusions,
+   preferences) or the expected refusal or clarification.
+   `npm run eval:plan` in `web/` scores the parser: passed cases, discarded
+   clear requests, wrong searches, preferences made hard, and precision and
+   recall per atom type. Order is reported separately. It replays offline
+   from cached Jev responses; `--live --budget <file>` fills the cache within
+   an approved budget. Each later PR must improve this score and keep the
+   Phase 1 checks. Results are scored by the live acceptance test below.
+2. **Hard and soft contract (R2).** Only these can be hard: date and time,
+   place, price, category, a genre or topic that the message names as what
+   the event is ("caz konseri"), a checkable format (outdoors, seated,
+   wheelchair access), audience and age, and exclusions of these. Moods,
+   vibes ("caz barı havası") and subjective qualities are preferences. They
+   affect ranking only. (Corrected 2026-10-26: the approved golden set makes
+   named genres hard.)
+   A hard atom needs explicit text and a clear confidence margin. Below the
+   margin it becomes a preference. A request is never discarded as a whole:
+   search with the confident atoms and ask only about the unclear one.
+3. **New request reader (R3, delivered with R2 as `web/parser/reader-v3.ts`).**
+   Code proposes candidates and Jev selects
+   (TypeSafe cookbook pattern). Dates: code lists the concrete dates of the
+   next 90 days with readable labels; Jev selects the dates the message
+   means. Categories and topics: Jev judges want, exclude or not mentioned for
+   each candidate, so negation lists keep each item and its polarity. Numbers:
+   Jev assigns each number a role (person's age, group size, per-person
+   price, total price, year, time). Code still does the calendar math, the
+   place hierarchy and the plan composition. Replace the fixed date and
+   negation fields of `web/parser/fields.ts`. Remove the span-first parser
+   when R3 passes (see Later).
+4. **Event enrichment (R4).** At collection time, one bounded Jev pass per
+   event document labels: audience (children, family, adult), minimum and
+   maximum age, the city and district where the activity happens, format
+   (hands-on, outdoor, seated) and a normalized category. Cache by document
+   hash like the vectors, so unchanged events cost nothing. Keep the source
+   text that supports each label. `plan-evidence.ts` checks audience, age and
+   place against these labels. "With children" is no longer always supported.
+   This moves v2 step 4 into v1 because v1 correctness needs it.
+   (Code delivered as `web/lib/event-labels.ts`; labels are cached by the
+   hash of the label input, which also holds the venue and address.)
+5. **Query embedding capacity (R5).** The Voyage free plan allows 3 requests a
+   minute. Searches above that rate fall back to word matching. The user
+   chose to stay on the free plan: cache query vectors by text and pace query
+   embedding requests below the limit in code.
+
+Acceptance:
+
+- On the hard set: 0 hard-constraint violations in returned cards, 0 discarded
+  plans for clear requests, every refusal and clarification correct, and at
+  least 85% of the requests with a relevant card in the top 3.
+- The Phase 1 golden checks still pass.
+- A new 60-request live test with new requests, reviewed against source
+  evidence, has no BAD result caused by parsing or missing event data.
+
+## Phase 2: Run unattended (target: 3–4 days, mostly waiting)
+
+Tasks:
+
+0. Keep vectors current: indexing runs every 3 hours with a daily call window
+   (`GCP_STAGING_INDEXING_UNTIL=open`). Done in PR 56.
+1. Add one scheduled monitor workflow. Every 3 hours, it calls `/api/ready` on
+   staging. If the result is not ready, or if `lastCheckedAt` is more than
+   20 h old, the workflow fails. (Hourly and 14 h until 2026-10-22.) GitHub then sends a failure email.
+   Done in PR 57 (job `monitor` in `gcp-collector.yml`; the collector identity
+   trusts only that file).
+2. Let scheduled collection run for 7 days. Do not deploy during that time,
+   unless you must fix a fault.
+3. Write down a 5-line recovery procedure in `gcp-deployment.md`: how to see a
+   failure, deploy the last good SHA, run a collection and check
+   `/api/ready`. Done in PR 57.
+
+Acceptance: 7 days with no failed collection that you did not see, and the
+catalog never stale.
+
+## Phase 3: Private beta (target: 1–2 weeks)
+
+Tasks:
+
+1. The user selects the access method (an invite link or an allow list) and
+   the URL. Do not make the service public without the user's approval.
+2. Add a simple feedback path: a thumbs up or down on each card and on each
+   result list. Store it with the request text, the parsed plan and the
+   returned record IDs. Store no personal data.
+3. Invite 5–10 people. After one week, group the feedback. Fix the top
+   problems in one batch. Add each fixed failure to the golden set.
+
+Acceptance: the user decides that v1 is good enough to open to more people.
+
+## v2: Ranking and scoring (start only after Phase 3)
+
+Goal: when many events match a request, the best ones come first.
+
+Current ranking: BM25 + vector rank fusion selects 16 candidates. Jev judges
+whether each candidate supports the request. Ties use the start time. No
+event-level quality signal exists.
+
+Steps:
+
+1. **Measure first.** Extend the golden labels to graded relevance (0–3)
+   for the top 10. Add metrics to the runner: NDCG@5 and precision@3. Record the
+   baseline before you change the ranking. No ranking change merges unless it
+   improves NDCG@5 and keeps the Phase 1 acceptance checks.
+2. **Cheap event signals from data we already have** (no AI, computed at
+   collection time, stored on the event):
+   - completeness: description, image, exact venue, exact price;
+   - offer signals: number of providers, lowest price, price spread;
+   - time: how close the event is to the requested time; sold-out or
+     nearly sold-out state when a provider shows it;
+   - venue: number of events at the venue and how well its location is known.
+   Unknown values are neutral. They are not a penalty.
+3. **Score composition in code.** Write one versioned function
+   (`ranking.v1`) that combines retrieval rank, Jev support and the event
+   signals with fixed weights. Tune the weights only on the golden labels.
+   Hard constraints always apply first.
+4. **AI-assisted enrichment (optional, needs a budget).** Run one bounded job
+   at collection time that tags each new or changed event with typed fields
+   (audience, mood, language, indoor or outdoor, family suitability) from its
+   description. Cache by content hash, so that unchanged events cost nothing.
+   Use the tags for filtering and ranking only after the labels show a gain.
+5. **Feedback signal.** After the beta collects enough thumbs up and down,
+   test whether feedback improves ranking. Keep new events visible. A new event
+   without feedback must not drop below the others.
+
+Acceptance for each v2 step: NDCG@5 improves on the golden set, all v1
+checks still pass, and the per-request cost does not increase without approval.
+
+## Decisions the user must make
+
+- Approve `AGENTS.md` (Phase 0).
+- Approve the embedding budget (Phase 1, task 5).
+- Review the golden requests and label a sample (Phase 1).
+- Select the beta access method and URL (Phase 3).
+- Approve any AI enrichment budget (v2, step 4).
+- Approve the Phase 1R budget for enrichment and evaluation runs, and decide
+  the query embedding capacity (Phase 1R, R5).
+
+## Later (not in v1)
+
+- Provider page aliases: track URL changes and propagate later retirement to
+  older aliases. Source heads still use URLs. Keep old observation times.
+- PostgreSQL cutover and the target architecture in
+  `docs/archive/catalog-enrichment-architecture.md` in Efeblk/event_recommender.
+- More providers. Promotions and discounts.
+- Performance at more than 4 concurrent users. The local benchmark measured a
+  p95 of 3.7 s at 4 concurrent requests.
+- Collector throughput: a global limit of 1 request each second over all
+  providers. It takes 2–3 runs to refresh all Biletix pages.
+- Remove the span-first parser (`web/parser/parse-core.ts`, `extract.ts`,
+  `gliner.ts`) and its tests after the field reader passes a staging human test.
+- Remove the field reader (`web/parser/fields.ts` question builder and
+  composition, keeping shared helpers) after reader v3 passes the Phase 1R
+  live test. The Phase 1 golden runner now uses reader v3, so its parser
+  cache needs one paid refill before the next scored replay.
+- Domain request model: after about 1,000 logged and reviewed requests, train
+  a small model on the field reader's judgments and compare both on the same
+  reviewed set. Switch only if it matches accuracy. Set a retention period for
+  `requestLog/` objects before production.
+- Field reader gaps: vague replacements of one bound ("onu 21.00 yap"), "the
+  other option" of an OR group, and the scope of a modifier over coordinated
+  types ("quiet concerts and theatre").
+- Remove unused conversational helpers and their historical tests. The v1 API
+  and golden runner use `recommendRequest`, which reads only the current message.
+- Replace the vulnerable Vinext build dependency chain when an upstream fix is
+  available. Six high npm advisories remain in the current build tools. The
+  suggested automatic fix downgrades Vinext and is not a safe runtime update.
+- Map Node client disconnects to the request AbortSignal in the Vinext adapter.
+  Measure cancellation of Cloud Storage and Firestore work. The application
+  deadline already stops later paid calls.
+- Define whether online-only listings belong in the Istanbul catalog. Keep the
+  decision explicit before changing the current eligibility policy.
+- Choose private durable storage and a retention period for raw source evidence.
+  Keep public workflow uploads off. This needs a storage and cost decision.
+- Review the captured `tr19` audience-fit miss before changing Jev judgments.
+  A child-directed concert is weak support for friends who want to dance.
+  Do not infer a hard adult-age condition from that request.
+- The archived PostgreSQL scripts, tests and plan in `web/deploy/` and
+  `web/scripts/` still name the deleted project `biplan-staging-efeblk`.
+  Update or remove them with the PostgreSQL work.
+- Corroborate the Canbay / Canbay & Wolker and Ada Bar identity pairs in
+  `web/work/comprehensive-review/golden-labels-agent-verified.json`.
+  The frozen sources do not prove a merge.
+
+## Status log
+
+- 2026-10-27: R4 code: collection-time event labels (`web/lib/event-labels.ts`,
+  `/api/admin/labels`, `index_only` workflow step behind
+  `GCP_STAGING_LABELING_TOKEN_CAP`). Plan evidence uses the labels for
+  children and family, attendee ages, place, category and format. Pilot on 9
+  staging documents: correct audience, age rule and district on all 9; about
+  3,000 input and 600 output tokens per document. The current catalog has
+  5,130 label documents: about 18.5M tokens, about $0.76 at the earlier
+  $0.041/M rate (output price not confirmed). Token cap: 19M, inside the
+  remaining Phase 1R Jev budget. Pilot cost: under $0.01.
+
+- 2026-10-26: R2 and R3 delivered as reader v3 (default `INPUT_READER=v3`).
+  Plan evaluation, same fixtures and scoring: hard set 50/60 (field reader
+  21/60), 0 clear requests discarded (11), 0 wrong searches; golden set
+  36/40 (field reader 34/40), where 3 of the 4 differences are the new
+  audience rule (a request for a child adds the children audience). Tokens
+  per search: about 43k input (field reader about 31k). The evaluation used
+  920 paid parser calls: 42.7M input and 11.4M output tokens, about $1.75 at
+  the earlier input rate; the exact amount is on the TypeSafe dashboard.
+  This is more than the $1.50 planned for evaluation inside the $4 Phase 1R
+  budget, because reader v3 requests are larger than estimated. No more
+  evaluation runs are planned. Private caches: `gs://biplan-stg-efeblk-
+  biplan-staging-data/evals/plan-eval/2026-10-26-reader-v3/`.
+
+- 2026-10-26: R1 plan evaluation baseline, current field reader (`jev-1.13.0`):
+  21 of 60 cases pass; 11 clear requests discarded; 0 wrong searches;
+  7 preferences made hard; recall: excluded topics 1/16, dates 21/33,
+  categories 16/27, budgets 15/23, places 18/26. 60 paid parser calls
+  (about $0.04). The offline replay reproduces the result with no calls.
+  Private cache and run: `gs://biplan-stg-efeblk-biplan-staging-data/evals/
+  plan-eval/2026-10-26-baseline/`.
+
+- 2026-10-26: Hard live test on staging (`561e125`, revision
+  `biplan-staging-00006-qhb`, full vector coverage). Codex and Argon each wrote
+  30 requests; Codex and Argon reviewed the results against the card source
+  fields. Result: 23 GOOD, 16 PARTIAL, 21 BAD; 51 of 230 cards violate a
+  condition. 29 results, 16 empty, 15 clarifications. p50 1.9 s, p95 9 s.
+  Causes: clear requests discarded as a whole ("family-friendly exhibition in
+  Üsküdar, Sat 31 Oct, ≤400 TL"); "with children" always supported (adult plays
+  for "çocuk etkinliği"); one age of two kept (a 7+ show for a 3-year-old);
+  negation lists flipped ("except pop, rap, electronic" became pop required);
+  wrong relative dates ("Kasım'ın ilk cuma" became 30 Oct); moods as hard
+  topics; day tours outside Istanbul; 6 searches fell back to word matching at
+  about 4 searches a minute (Voyage free plan: 3 a minute). Staging allows 20
+  paid searches per IP per hour, so the test ran in three batches. The first 40
+  reviews saw card weekdays without dates. About 60 paid searches, under the
+  approved $1 cap. Private evidence: `gs://biplan-stg-efeblk-biplan-staging-data/
+  evals/hardtest-2026-10-26/` (inputs, 60 raw responses, review files and
+  verdicts). The user decided to rebuild request
+  understanding: Phase 1R. Phase 1R budget: $4 for Jev; Voyage stays on the
+  free plan.
+
+- 2026-10-23: The friends test is closed. It opened at about 15:08 UTC on
+  2026-10-22 with `allUsers` invoker and `BIPLAN_PREVIEW_TESTING=true` on
+  `biplan-staging-00003-7jt`. It closed at 15:10 UTC on 2026-10-23: `allUsers`
+  removed, and `biplan-staging-00006-qhb` (`561e125`, preview off) has
+  100 % traffic. Anonymous `/api/health` returns 403. `/api/ready` is ready
+  with 7,739 eligible events. No friend used the service. Cloud Run logs show
+  one page load and 31 `/api/recommend` requests, all on `00003-7jt`. One was
+  the opening smoke test. The other 30 came 08:39–08:54 UTC at fixed 16 s
+  intervals with repeated prompts: a scripted agent test, not friends. Result:
+  18 `results`, 9 `empty`, 4 `needs_input`. Most empty results say the hard
+  conditions could not be verified (child ages, a free exhibition, a total
+  budget for two). The returned cards were not reviewed against source
+  evidence. The deploy at 10:48 UTC moved traffic to `00004-tpl`, which had
+  logging off. No `/api/recommend` request reached it.
+
+- 2026-10-23: Indexing did not converge. 155 of 4,208 documents had vectors.
+  Calls embedded about 8 documents each. The last scheduled run
+  [39905785045](https://github.com/Efeblk/event_recommender/actions/runs/39905785045)
+  embedded none: it started directly after another run and met the pacing
+  limit. The user asked to index at the Voyage free-plan rate. Limits are now
+  45 calls per run, 20000 input bytes per call and 400 calls per window.
+  A manual `index_now` run indexes without collection.
+  [PR #91](https://github.com/Efeblk/event_recommender/pull/91) deployed by
+  [39941643342](https://github.com/Efeblk/event_recommender/actions/runs/39941643342). Manual runs [39942127212](https://github.com/Efeblk/event_recommender/actions/runs/39942127212),
+  [39947817161](https://github.com/Efeblk/event_recommender/actions/runs/39947817161), [39953882064](https://github.com/Efeblk/event_recommender/actions/runs/39953882064),
+  [39966289943](https://github.com/Efeblk/event_recommender/actions/runs/39966289943) and [39972944753](https://github.com/Efeblk/event_recommender/actions/runs/39972944753)
+  embedded about 890 documents each. All 4,205 documents now have vectors;
+  0 are pending. They used 1,234,034 observed tokens. Scheduled run
+  [39951548281](https://github.com/Efeblk/event_recommender/actions/runs/39951548281) lost its runner and has no
+  logs; it embedded 36 documents and did not halt the window. Authenticated
+  `/api/ready` returned ready with 7,737 eligible events and no pending search
+  activation. No Jev calls.
+
+- 2026-10-22: The user asked for fewer GitHub Actions runs. Scheduled
+  collection now runs every 12 h (was 6 h). The monitor and indexing run every
+  3 h (was hourly). The monitor stale limit is 20 h (was 14 h). CI runs on
+  Ubuntu only. A manual run of `web.yml` also tests Windows. The deploy gate
+  requires only the Ubuntu checks. The old Cloud Monitoring alerts are not
+  recreated in the new project. Initial indexing of the new catalog is slower:
+  about 8 runs with up to 4 calls each per day.
+
+- 2026-10-22: Staging moved to the new project `biplan-stg-efeblk`. In the
+  restored project `biplan-staging-efeblk`, Cloud Run, Artifact Registry and
+  Firestore still reported the project as deleted. Firestore returned
+  `Cannot serve requests because the database was deleted.` The user approved a
+  new project. Terraform created the same 41 staging resources there. The three
+  secret values were copied without display, and their hashes match. The old
+  bucket was copied to `gs://biplan-stg-efeblk-biplan-staging-data`, including
+  the golden archive and preserved evidence. The deploy workflow needs an
+  existing service, so a private placeholder service was created first.
+  Deploy [39690834109](https://github.com/Efeblk/event_recommender/actions/runs/39690834109)
+  promoted `biplan-staging-00002-nlm` (`e2f28c0`). It failed only at readiness,
+  because the new catalog was still empty. Manual collection
+  [39691847980](https://github.com/Efeblk/event_recommender/actions/runs/39691847980)
+  passed. `/api/ready` then returned ready with 3,420 stored and 3,399
+  eligible events. More collection runs will grow the catalog. Anonymous
+  requests return 403. Collection and indexing schedules were enabled at
+  10:46 UTC. The new 7-day Phase 2 window starts now. The old project is
+  `DELETE_REQUESTED`. Its Firestore pointers were lost, so scheduled indexing
+  rebuilds the vector index under the approved Voyage budget.
+
+- 2026-10-22: Staging deploy [run 39683193231](https://github.com/Efeblk/event_recommender/actions/runs/39683193231) passed the exact-master checks and built the image. Google rejected the push: `Project #244737996182 has been deleted.` The project API reports `ACTIVE`. Billing is enabled. The repository exists. The deploy identity has Artifact Registry writer access. These results conflict. No revision was deployed. Monitor [run 39674247228](https://github.com/Efeblk/event_recommender/actions/runs/39674247228) got HTTP 404. Runs [39599532171](https://github.com/Efeblk/event_recommender/actions/runs/39599532171) and [39556248471](https://github.com/Efeblk/event_recommender/actions/runs/39556248471) failed to exchange the collector token. Google returned `invalid_target`. Collection and indexing remain disabled. Manual collection did not run. The 7-day Phase 2 window has not started.
+
+- 2026-10-20: Staging restart for Phase 2. On 2026-10-10, the staging project
+  `biplan-staging-efeblk` was set to `DELETE_REQUESTED`.
+  `GCP_STAGING_COLLECTION_ENABLED` and `GCP_STAGING_INDEXING_ENABLED` were set
+  to `false`. After that, the hourly monitor failed at the GCP login step. The
+  user approved a restart. The project is restored with billing linked again.
+  The Cloud Run services and the data bucket are still there. Deploy run
+  [39436365824](https://github.com/Efeblk/event_recommender/actions/runs/39436365824)
+  failed at its CI gate: 681 check runs were on `fce2541`, and the gate read
+  only the first 100.
+  [PR 87](https://github.com/Efeblk/event_recommender/pull/87) makes the gate
+  read all pages. The deploy, the collection, the re-enabled schedules and the
+  new 7-day Phase 2 window are pending.
+
+- 2026-10-09: [PR 86](https://github.com/Efeblk/event_recommender/pull/86)
+  removes two unused UI components and the unused `web/scripts/sync.mjs`.
+  Six guides now describe the current v1 flow. Historical evidence remains.
+  Local checks passed on Node 22.23.1: 861 web tests, typecheck and lint.
+  All 24 checked local documentation links resolve. No deleted helper has a
+  tracked consumer. The diff check and independent review passed. Logs stay
+  under `web/work/cleanup/`. No cloud or AI calls. Runtime logic, dependencies
+  and deployment configuration stay the same.
+
+- 2026-10-09: [PR 84](https://github.com/Efeblk/event_recommender/pull/84)
+  merged as `17e15eb`. Exact PR CI
+  [37862431716](https://github.com/Efeblk/event_recommender/actions/runs/37862431716)
+  passed on `316d19b`. Exact merge CI
+  [37862907450](https://github.com/Efeblk/event_recommender/actions/runs/37862907450)
+  passed all six jobs. The PR 84 branch is deleted. Final local checks passed
+  on Node 22.23.3: 861 web tests, 301 collector tests and one existing skip,
+  52 deployment checks, typecheck, lint, GCP checks, Node build and smoke.
+  Smoke made zero cloud or AI calls. Private staging deployment
+  [37863391094](https://github.com/Efeblk/event_recommender/actions/runs/37863391094)
+  passed. Revision `biplan-staging-00062-8tg` matches the verified Git tree,
+  lockfiles and Linux image checksums. Anonymous health returned 403.
+  Checkpoint-only recovery
+  [37863854725](https://github.com/Efeblk/event_recommender/actions/runs/37863854725)
+  passed with zero imports and zero paid AI calls. The original report time
+  remains `2026-10-08T22:02:16.173Z`. Canonical content and readiness agree:
+  14,644 records, event-array SHA-256
+  `72940d6749ede7aa3a1dac3bee9a4c785dcf27e3240fc217c6eef6e2eb84d3e9`,
+  HTTP 200, 8,695 eligible events and no pending publication. Diagnostic
+  [37864051747](https://github.com/Efeblk/event_recommender/actions/runs/37864051747)
+  confirms a successful complete attempt in 159,551 ms. It read all 5,578
+  source pages. The previous failed attempt took 362,620 ms. These times
+  include source reads and materialization. CPU, memory, deadlines, leases
+  and reader concurrency did not increase. Scheduled fetching was paused
+  from `2026-10-09T00:00:15Z` to `2026-10-09T00:20:24Z` for this maintenance.
+  `GCP_STAGING_COLLECTION_ENABLED=true` and `UNTIL=open` are restored.
+  Failed runs, exact output proofs and validation logs are backed up under
+  `web/work/comprehensive-review/`. All copied hashes match.
+  [PR 85](https://github.com/Efeblk/event_recommender/pull/85) records these
+  results. It changes documentation only. The frozen 40-request review has
+  zero audited hard violations and 90% relevant top-three coverage. Estimated
+  validation cost is $0.11168577 within the approved $0.26 cap. Human sample
+  review, new staging latency and seven-day collection qualification remain
+  open. The six upstream Vinext build-chain advisories remain in Later.
+
+- 2026-10-09: [PR 81](https://github.com/Efeblk/event_recommender/pull/81)
+  merged as `8b933f4`. Final PR CI
+  [37843353597](https://github.com/Efeblk/event_recommender/actions/runs/37843353597)
+  passed on `6f8bb6a`. Exact merge CI
+  [37844642784](https://github.com/Efeblk/event_recommender/actions/runs/37844642784)
+  passed all six checks, including the Linux image. Private staging deploy
+  [37845446660](https://github.com/Efeblk/event_recommender/actions/runs/37845446660)
+  passed. Revision `biplan-staging-00059-66f` matches the reviewed Git tree,
+  lockfile bytes and image checksums. Authenticated health and readiness passed
+  with 8,675 eligible events. Anonymous health returned 403. This first readiness
+  response describes the existing active checkpoint. Manual collection
+  [37846165394](https://github.com/Efeblk/event_recommender/actions/runs/37846165394)
+  finished source collection at `2026-10-08T22:02:16.173Z`. Publication failed
+  before the checkpoint changed. The import validator rejected 116 retained
+  events on 35 pages after the verified category repairs. [PR 82](https://github.com/Efeblk/event_recommender/pull/82)
+  accepts only the proven `Tiyatro` to `Stand-up` and `Sergi` to `Gezi`
+  retained projections. All other source bindings remain strict. All 1,499
+  preserved import batches pass offline after the fix. The checkpoint
+  projection is 23,805,811 bytes, below the 32 MiB limit. The report SHA-256 is
+  `e9a2f3211b809bd0e152581ae2a8a8f1b27ff2a0a925a000fa2c2386b8186ad3`.
+  This run confirms the Tuz Biber time conflict and the Çilekeş availability
+  conflict. It did not revisit the known venue-conflict pages.
+  PR 82 adds a bounded replay mode. It checks artifact provenance and every
+  import batch before writes. It preserves all original source timestamps,
+  skips collection and indexing, and requires exact checkpoint and readiness
+  agreement with the original report time. Both authenticated readbacks bind
+  to the same saved time, event count and event-array SHA-256. Final local
+  checks pass on Node 22.23.3: 857 web tests, 291 collector tests (one existing
+  skip), typecheck, lint, 50 deployment tests, GCP checks, Node build and smoke.
+  Smoke made zero cloud or AI calls. PR 82 merged as `fedb97f` after exact PR
+  CI [37852406946](https://github.com/Efeblk/event_recommender/actions/runs/37852406946)
+  passed all six jobs on `04b5f9b`. Exact merge CI
+  [37852954936](https://github.com/Efeblk/event_recommender/actions/runs/37852954936)
+  also passed all six jobs. Private staging deploy
+  [37853674195](https://github.com/Efeblk/event_recommender/actions/runs/37853674195)
+  passed on `fedb97f`. Revision `biplan-staging-00060-8kv` matches the reviewed
+  candidate tree, lockfile bytes and Linux image checksums. Authenticated health
+  and readiness passed against the old checkpoint. Anonymous health returned
+  403. Replay [37854227546](https://github.com/Efeblk/event_recommender/actions/runs/37854227546)
+  passed provenance, digest, all-batch validation and private deployment
+  preflight and completed import. The checkpoint POST timed out after 240 s.
+  Its result is unknown; no rollback is assumed. Collection and paid indexing
+  were skipped. Read-only verification
+  [37856886583](https://github.com/Efeblk/event_recommender/actions/runs/37856886583)
+  and [37857066750](https://github.com/Efeblk/event_recommender/actions/runs/37857066750)
+  failed with HTTP 429. Neither proves the active pointer. [PR 83](https://github.com/Efeblk/event_recommender/pull/83)
+  adds bounded publication-phase diagnostics, deadline checks before pointer
+  activation, read-only runtime inspection and checkpoint-only recovery.
+  Recovery uses a labelled proof from the exact failed job log and immutable
+  publisher call site. It does not fabricate an original import receipt.
+  A bounded cache reuses exact identity-normalization inputs. On the preserved
+  12,006-record catalog, CPU materialization fell from 96.34 s to 69.96 s.
+  Complete output is unchanged: 65,317,939 bytes, SHA-256
+  `a3a37fc0fac09be701976d2801499a14dedd52319e793d914dc5fb72c083fc92`.
+  This CPU result does not establish the live timeout cause. Local checks pass
+  on Node 22.23.3: 861 web tests, 298 collector tests and one existing skip,
+  52 deployment checks, typecheck, lint, GCP checks, Node build and smoke.
+  Smoke made zero cloud or AI calls. PR 83 merged as `72533bd` after exact PR
+  CI [37858862498](https://github.com/Efeblk/event_recommender/actions/runs/37858862498)
+  passed on `8f88706`. Exact merge CI
+  [37859525944](https://github.com/Efeblk/event_recommender/actions/runs/37859525944)
+  passed all six jobs. The PR branch is deleted. Read-only runtime inspection
+  [37859548309](https://github.com/Efeblk/event_recommender/actions/runs/37859548309)
+  found healthy service conditions and unchanged CPU, memory and timeout limits.
+  It does not establish the HTTP 429 cause. Candidate preparation
+  [37859827730](https://github.com/Efeblk/event_recommender/actions/runs/37859827730)
+  stopped at its CI guard while the Windows job was pending. Its log is preserved.
+  Private staging deploy
+  [37860057207](https://github.com/Efeblk/event_recommender/actions/runs/37860057207)
+  passed. Revision `biplan-staging-00061-xw6` matches the reviewed Git tree,
+  canonical lockfile digests and Linux image checksums. Authenticated health
+  and readiness passed against the old active checkpoint. Anonymous health
+  returned 403 at `2026-10-08T23:39:02.905Z`. Delayed scheduled collection
+  [37859201249](https://github.com/Efeblk/event_recommender/actions/runs/37859201249)
+  was cancelled during fetch for checkpoint recovery maintenance. Import had
+  not started. Its evidence is preserved. Schedule variables remain enabled.
+  Checkpoint-only recovery
+  [37860529371](https://github.com/Efeblk/event_recommender/actions/runs/37860529371)
+  passed the legacy proof and sent no imports. The client timed out after 280 s.
+  Both final readbacks returned HTTP 429. These failures are preserved.
+  Diagnostic [37861178327](https://github.com/Efeblk/event_recommender/actions/runs/37861178327)
+  then returned HTTP 200. The durable attempt failed at `materialize` with
+  `deadline_exceeded`. It read all 5,578 sources and selected 14,644 records.
+  Total elapsed time was 362,620 ms. This is not the materialization duration
+  alone. No search or checkpoint object was written. The old active pointer
+  is unchanged. Readiness recovered with 8,675 eligible events. Publication
+  performance is the recovery blocker. [PR 84](https://github.com/Efeblk/event_recommender/pull/84)
+  removes repeated comparisons between identical venue-conflict evidence.
+  It keeps every listing, graph edge, traversal order and identity rule.
+  On the complete preserved 12,006-record workload, materialization took
+  30.97 s instead of 69.96 s. Full output bytes and SHA-256 are identical.
+  All 90 adversarial resolver workloads also match the old complete output.
+  An approximate 14,644-record union took 29.00 s instead of 92.76 s with
+  identical output SHA-256 `c4876e083aa8ce999db05ad7749cba473b9423f1c69c2e056dccaff3f364c999`.
+  Carried checkpoint records omit rich provider listings. This approximation
+  does not prove exact production output. New diagnostics record each phase's
+  start offset. Reader concurrency, deadlines and resource limits stay the same.
+  PR 84 validation and private recovery are pending.
+  Recovery evidence stays under `web/work/comprehensive-review/`.
+  Deployment evidence stays in
+  `web/work/comprehensive-review/staging-deploy/`.
+
+- 2026-10-08: [PR 81](https://github.com/Efeblk/event_recommender/pull/81)
+  contains the comprehensive v1 fixes on `t3code/comprehensive-project-review`.
+  The user delegated review of the two revised golden requests and approved
+  $0.25 for TypeSafe/Jev plus $0.01 for Voyage. The first live frozen run
+  (`web/work/comprehensive-review/golden-live.json`, SHA-256
+  `f872f7b58fc246a3683d92e2a581093ebd45de0f6a270d9a386e406d2def551a`)
+  stopped paid calls after a provider failure in `tr14`. Source review covered
+  all 144 returned cards and 225 offers. It found nine category violations,
+  false clarification in `tr04`, false empty in `tr13`, one source time
+  conflict and inconsistent top-level source metadata. Later guard rows are
+  not live tests. All three failed diagnostic runs remain preserved. The later
+  runs exposed mixed-category polarity, soft-wish filtering, same-date venue
+  conflicts and door-clock evidence lost across merged offers. The fixes now
+  resolve only proven clause roles. They preserve ambiguous model judgments,
+  raw source records and selected-offer metadata. They withhold conflicting
+  sessions and keep uncertain performance times out of start-time filters.
+  The final frozen run is `web/work/comprehensive-review/golden-live-verified.json`
+  (SHA-256 `e650cec04083811e79b295497f43d4bfa9957fe30dbd55df59493ff2f6dfc147`).
+  Full vectors cover all 8,752 eligible events. All 40 parser checks pass.
+  Source review covered all 379 cards, 578 offers and four valid empty results.
+  There are zero audited hard violations, grounding mismatches or confirmed
+  duplicates. Relevant top-three coverage is 36/40 (90%). The run made 11 new
+  paid calls and reused 101 exact cached calls. Changed questions received
+  fresh judgments in the preserved preceding runs. Final agent labels bind
+  to result SHA-256 `f98790807db8ecd574e37d5ce02438e2545cbc34b1d0232902d8835524f29c13`.
+  The child-directed dancing card and unproven identity pairs remain explicit
+  review limits. Estimated total validation charges are $0.11168577, including
+  the failed-call reserve: TypeSafe/Jev $0.10961853 and Voyage $0.00206724.
+  No paid call was retried automatically. The new human sample review and
+  staging latency remain pending. Phase 1 is not newly declared complete.
+  Codex Security scan `b3de800a-3974-4a49-abd4-fef9d6286542` reported one low
+  request-body resource issue at `dd59bbb`. Byte and time limits are applied
+  in the working patch. Security coverage is partial; archived and frozen
+  paths were not assessed as active v1 code.
+  Local checks passed on Node 22.23.3: 856 web tests, 285 collector tests
+  (one existing skip), typecheck, lint, 47 deployment tests, GCP configuration,
+  Node build and smoke. Browser checks passed: 39 tests and one viewport skip.
+  The T3 browser checked the compiled error state and independent messages
+  with mocked local APIs. No live staging latency is claimed. Evidence stays
+  under `web/work/comprehensive-review/`. Exact implementation CI passed on
+  `78131fb` (run [37841719970](https://github.com/Efeblk/event_recommender/actions/runs/37841719970)),
+  including the Linux image. Deployment now requires authenticated health and
+  readiness evidence and preserves both in its existing provenance artifact.
+  Final revision CI, merge, private staging and new collection publication
+  remain pending.
+
+- 2026-10-03: Plan written. `master` = `bad42d0`. Staging deployed
+  (37148883212). Scheduled collection is on. Collection 37149121969 succeeded.
+- 2026-10-04: [PR 45](https://github.com/Efeblk/event_recommender/pull/45) starts
+  Phase 0 tasks 1–2 from `bad42d0`. The user accepted `AGENTS.md` on 2026-10-04.
+  `AGENTS.md` has 62 lines. Archived 41 files and added the current v1 architecture.
+  Merge is pending exact-revision CI. Runtime and workflow tasks 3–5 follow.
+  Local checks passed: 131 repository links, archive preservation and diff checks.
+  Source changes only update documentation paths in comments. No paid calls.
+- 2026-10-04: Resolved the instruction conflict in favor of this plan.
+  PostgreSQL migration and the older launch gates do not define v1 scope.
+  PostgreSQL code stays in its current folders. Workflow removal is pending.
+- 2026-10-04: PR 45 merged as `7a7e676`. All eight CI checks passed on `dd33560`.
+  The merge has the same Git tree. The local and remote PR branch are deleted.
+  Phase 0 tasks 1–2 are delivered. Tasks 3–5 are now in progress.
+- 2026-10-04: [PR 46](https://github.com/Efeblk/event_recommender/pull/46)
+  implements Phase 0 tasks 3–5. Local checks passed on Node 22.23.3.
+  Removed the Cloudflare runtime. Node is the default build and preview.
+  PostgreSQL code stays in its current folders. Its workflow steps are removed.
+  Public collection artifacts contain explicit JSON report paths and no raw pages.
+  Checks passed: 771 web tests, 274 collector tests, typecheck, lint, deployment
+  checks, Node build/smoke, and 45 browser tests. One collector test and one
+  browser test were skipped. All 130 documentation links resolve. No paid calls.
+  The accepted AGENTS.md policies remain. The file now has 61 lines.
+  CI, staging deploy, collection and readiness checks are pending.
+- 2026-10-04: PR 46 merged as `a0aaf5d`. All seven checks passed on `3df6ba1`.
+  The merge has the same Git tree. The local and remote PR branch are deleted.
+  [CI](https://github.com/Efeblk/event_recommender/actions/runs/37157806177) and
+  [Bi Plan](https://github.com/Efeblk/event_recommender/actions/runs/37157806178)
+  passed on `master` at `a0aaf5d`.
+- 2026-10-04: [Staging deploy 37158069593](https://github.com/Efeblk/event_recommender/actions/runs/37158069593)
+  succeeded on `a0aaf5d`. The verified image runs as `biplan-staging-00036-jpq`.
+  The deployment artifact preserves the image digest and source revision.
+  `/api/ready` returned 200 at `2026-10-03T22:25:25.021Z`, with 8,724 eligible
+  events and no pending search publication. Staging remains private.
+  The T3 Code browser loaded the live catalog. All six home cards matched their
+  nine stored provider observations. The cards were distinct. No paid calls.
+- 2026-10-04: [Collection 37157847678](https://github.com/Efeblk/event_recommender/actions/runs/37157847678)
+  succeeded on `a0aaf5d`. Canonical readback passed. The durable checkpoint has
+  14,559 source records. The report lists 4,315 refreshed pages, 150 failed pages
+  and 5 quarantines. Provider coverage remains partial.
+  Artifact `11287985394` contains 10 JSON/JSONL files and no raw page files.
+  The publication receipt and source report remain in the run artifact.
+  Indexing was disabled: zero requests and zero attempts.
+- 2026-10-04: Final `/api/ready` returned 200 at `2026-10-03T23:15:33.943Z`.
+  It reported 8,847 eligible events and no pending search publication.
+  Its checkpoint time matches collection `37157847678` at
+  `2026-10-03T22:56:52.970Z`. All Phase 0 acceptance checks passed.
+  This status update changes documentation only. Keep the verified staging image
+  from `a0aaf5d`; its runtime contents are unchanged. No paid AI calls.
+- 2026-10-04: Cleanup. Removed the legacy Python project (`src/`, `tests/`,
+  `frontend/`, `config/`, `scripts/`, Python and Docker files) and its `CI`
+  workflow. The deploy gate no longer requires the `test` check. The root
+  `.gitignore` no longer hides new `collector/lib/` files. Removed extra
+  worktrees and merged branches; `archive/postgres-catalog-staging-wip-2026-10-03`
+  remains.
+- 2026-10-04: Phase 1 preparation pins collection `37181072133` and its
+  `collector/state/events.json`: 14,577 source records, 29,467,263 bytes,
+  SHA-256 `20ad813f83491e2014396bc628b2193058c51ef92b620d1f2cac04918ac7efe6`.
+  The frozen time is `2026-10-04T06:50:27.793Z`. Production preparation admits
+  8,845 sessions. A private GCS archive has the same verified SHA-256.
+- 2026-10-04: The user approved all 40 golden requests and expected constraints
+  (25 Turkish, 15 English, two corrections). The user approved a $2 Phase 1 Jev
+  cap and unrestricted Voyage use. No paid calls have been made in Phase 1 yet.
+  The current index estimate is 3,920 documents, approximately 1.22 million
+  Voyage tokens ($0.15; conservative byte envelope $0.48, no free-credit assumption).
+  The old `37061051538:1` reservation is still in flight. Recovery is pending.
+- 2026-10-04: The golden runner uses production parsing, identity, retrieval and
+  ranking. It caches provider responses and preserves failed attempts. Labels
+  remain pending. The offline catalog audit finds hard matches for 34 requests;
+  six require empty-result review. Full indexing, the scored baseline, user label
+  review and staging p95 remain pending. Phase 1 is not complete.
+- 2026-10-04: [PR 50](https://github.com/Efeblk/event_recommender/pull/50)
+  merged as `6ccc264`. All six CI checks passed on `f63edde`. The branch is
+  deleted. Recovered the old `37061051538:1` response: six vectors and 1,892
+  tokens, with zero new paid calls. Its private recovery receipt remains under
+  `embedding-audit/staging/3ae905c06ef26ad917d367f08a246d9f3fd5980bee3910c12c61543981ac27a8/37061051538/`.
+  The reservation is cleared. A new finite index window is recorded; automated
+  indexing stays disabled while the approved manual full-index job runs.
+- 2026-10-04: Preserved the first partial baseline in
+  `web/work/phase-one/baseline-partial.json`. Voyage query four returned HTTP 429.
+  New paid baseline calls stopped. The first three requests exposed a Sunday
+  date error: "this weekend" selected October 10–11 instead of October 3–4.
+  The fix keeps this weekend on Sunday, shares 21-second Voyage pacing across
+  local jobs, and records an explicit recovery separately from the failed charge.
+  Lowercase district names now survive mixed-case currency text such as `TL`.
+  Local checks passed: 785 web tests, typecheck and lint on Node 22.23.3.
+  Node build/smoke and GCP configuration checks passed with zero cloud/AI calls.
+  An initial paced recovery exhausted the evaluation embedding timeout while
+  waiting. That failed attempt stays recorded. The harness timeout includes its
+  shared pacing wait; staging keeps the production timeout. Document accounting
+  locks no longer cover provider waits. The separately recorded recovery passed.
+  Full indexing and the recovered diagnostic baseline are running. Their partial
+  vector coverage cannot pass the final quality gate. Labels remain pending.
+- 2026-10-04: Oracle comparison now follows production evidence semantics:
+  per-ticket and per-person ceilings compare the same listed ticket price;
+  positive companion atoms describe attendees; equivalent De Morgan trees keep
+  their exclusions. Group totals and strict comparisons stay distinct. The
+  approved requests and expected constraints are unchanged. The diagnostic run
+  has exposed category-negation scope and attendee-dancing interpretation
+  failures. A calm partner request is empty and needs full-index/source review.
+- 2026-10-04: The paced diagnostic run reached all 40 requests. No further
+  provider failure occurred. Its first complete replay made zero paid calls and
+  used 103 cached responses. It preserves 10 category violations in `tr12`, an
+  unsupported beginner request (`en08`), and the attendee-dancing mismatch
+  (`tr19`). Source review found two duplicate sessions under variant titles in
+  `tr02` and `tr03`; the exact-title audit missed them. The full-index run still
+  has pending documents. This diagnostic is not a passing Phase 1 score.
+- 2026-10-04: [PR 51](https://github.com/Efeblk/event_recommender/pull/51)
+  merged as `da0a4ef`. All six CI checks passed on `fa65052`; its branch is
+  deleted. The second fix batch corrects negation scope, attendee dancing,
+  beginner preferences, superseded district references and structured calm
+  shortlist coverage. Three source-reviewed title pairs and one venue pair
+  preserve distinct times, venues and audience policies.
+- 2026-10-04: `web/work/phase-one/fix-one.json` completed all 40 requests:
+  zero hard violations and zero automatic duplicate candidates. Its run hash
+  is `8d0e573afcd5f9b0b3d63c8e29cad6c22df881722955c5c2edcaa94718b23e00`.
+  The district correction exposed a superseded exclusion; its fix passes a
+  zero-paid replay. Merging the Discman offers requires new rankings for the
+  English correction chain. `fix-two.json` is filling those cache entries.
+  Checks pass: 790 web tests, typecheck, lint, 275 collector tests (one skipped),
+  GCP configuration, Node build and smoke. Full indexing, source labels, user
+  sample review and staging latency remain pending. Partial vectors cover
+  3,934 of 8,831 eligible sessions; this diagnostic cannot pass Phase 1.
+- 2026-10-04: `fix-two.json` completed 40 requests with zero parser mismatches,
+  hard violations or automatic duplicate candidates; it reused 103 responses
+  and made two new ranking calls. Source review then found a hologram circus
+  and pub quiz sold under `Tiyatro`. Ranking now checks the described program
+  when it contradicts a provider category. Preserved targeted probes exclude
+  both entries and retain matching plays. `fix-two-format.json` checks the
+  policy across all 40 requests. Full vectors and reviewed labels remain pending.
+- 2026-10-04: [PR 52](https://github.com/Efeblk/event_recommender/pull/52)
+  merged as `cf66417` after all six checks passed on `64d3b1a`; its branch is
+  deleted. The 40-request format diagnostic and zero-paid replay share result
+  hash `d0dbe5ec209d9e7d07bf469345127c7dff5c3a46eecf85550004fa2b38c9ec18`.
+  The replay uses 105 cached responses. Full coverage and labels remain pending.
+- 2026-10-04: The source audit of empty results finds 84 age-supported theatre
+  sessions excluded by the broad `show` category. The two child-show empties
+  are incorrect. A narrow follow-up includes theatre in shows, retains age
+  evidence and category exclusions, and passes 791 web tests, typecheck, lint,
+  Node build and smoke. `child-shows.json` reruns all 40 approved requests.
+  This follow-up exceeds the two planned fix PRs in task 6; obtain user approval
+  for the concrete additional PR before merge. Phase 1 remains incomplete.
+- 2026-10-04: The user approved the additional child-show fix in
+  [PR 53](https://github.com/Efeblk/event_recommender/pull/53). It merged as
+  `bb5f123` at 12:40 UTC after all six checks passed on `bb67eba`; its branch
+  is deleted. Both child requests return ten age-supported plays. The preserved
+  40-request diagnostic and zero-paid replay share result hash
+  `60d05f813659e83c4a7468478179f1a802ba97aad57dd1c2ebe2cb1795158af3`.
+  Full indexing, final labels, user sample review and staging latency remain pending.
+- 2026-10-04: Private staging deployment
+  [37203260179](https://github.com/Efeblk/event_recommender/actions/runs/37203260179)
+  succeeded on `bb5f123`; all six exact-commit CI checks and the immutable Linux
+  candidate checks passed. Revision `biplan-staging-00037-f2m` receives 100% traffic.
+  Health reports the expected SHA and `/api/ready` returns 200. IAM remains private.
+  The frozen-catalog source audit confirms 84 supported matches for each child
+  request and zero hard matches for `tr21`, `tr22`, `tr24` and `tr25`.
+  Full-vector coverage and measured acceptance remain pending.
+- 2026-10-04: Full indexing published 1,418 new vectors and read back all 3,948
+  document hashes. `vectors.json` covers all 8,831 frozen eligible sessions;
+  SHA-256 is `a793e40584120cefb97099e0a384e9a15ad5597166cc25a55ec30102bb0e4841`.
+  `full-baseline.json` starts the 40-request full-vector run. Scheduled collection
+  [37201756266](https://github.com/Efeblk/event_recommender/actions/runs/37201756266)
+  succeeded and published 8,699 eligible sessions (205 failed pages, 13 quarantines).
+  A readback found 152 new document hashes; incremental indexing reuses the captured
+  cache and preserves the frozen export. Staging latency awaits that coverage.
+- 2026-10-04: The first full-vector baseline completed 40 requests; its
+  zero-paid replay matches result hash
+  `618e36b5f296d129004267e3b5ca792c1bc8652df5dd95a8801f6f87e403799d`.
+  Source review found a duplicated Rossi Suadiye social event, a talk sold as
+  a concert and a child-only workshop in a friends' dance request. These prevent
+  acceptance. A focused fix adds the reviewed Rossi title pair, keeps separate
+  Sanat dance-night source clocks while displaying one programme, and tightens
+  format/audience scoring. Checks pass: 794 web tests, typecheck, lint, Node build
+  and smoke, 275 collector tests (one skipped). `full-fixed-two.json` reruns all
+  40 requests. This additional fix PR needs user merge approval under task 6.
+- 2026-10-04: Incremental indexing completed at 13:48 UTC. It published the
+  remaining 152 vectors and read back 4,275 frozen/current document hashes.
+  The frozen vector export is unchanged. Final coverage readback, result labels,
+  user sample review and staging latency remain pending.
+- 2026-10-04: The user approved the additional fix in
+  [PR 54](https://github.com/Efeblk/event_recommender/pull/54). It merged as
+  `1989694` at 14:24 UTC after all six checks passed on `4a1bf8b`; its branch
+  is deleted. `full-fixed-three.json` and its zero-paid replay complete 40
+  requests with result hash
+  `b0bcd6f53db8d388381d5f9794864edf712365c6e1c2accd80d81cf7cff4ea6c`.
+  Source review labels all 286 cards: zero hard violations or duplicates,
+  four correct empties, and relevant top-three cards for 36/40 requests (90%).
+  The user reviewed and approved 17 actual result lists. Labels bind the fixture,
+  catalog, original run and result hashes. `frozen-quality-final.json` passes
+  the frozen quality bar. Staging latency remains pending.
+- 2026-10-04: `index-verification-final-three.json` confirms all 3,832 current
+  staging document hashes and all 8,831 frozen eligible sessions have vectors.
+  The private published catalog is fully indexed. No source checkpoint changed
+  during verification; frozen export hash remains `a793e40584120cefb97099e0a384e9a15ad5597166cc25a55ec30102bb0e4841`.
+- 2026-10-04: Pin the approved golden fixture to CRLF in `.gitattributes`.
+  Git's stored LF blob otherwise changes the raw fixture hash on Linux.
+  Export checks with `core.autocrlf=false`, `true` and `input` all preserve
+  the approved hash `b4fc63d47fe2de9f25c1b61098cc14f66c08455802c9c2ec664b309ec224c4d0`.
+  The requests, constraints and existing captured responses are unchanged.
+- 2026-10-04: Private staging deploy
+  [37209512632](https://github.com/Efeblk/event_recommender/actions/runs/37209512632)
+  succeeded on merged fix `1989694`. All six master checks and immutable image
+  checks passed. `staging-latency-one.json` measured all 40 serial searches:
+  HTTP 200 for every request, p95 5.530 s, maximum 16.782 s. The 10.383 s and
+  16.782 s responses stay included; no timed search was excluded or retried.
+  Source SHA stayed fixed. The benchmark flag affects visitor limits only.
+  `staging-latency-final-restored.json` verifies normal limits on active revision
+  `biplan-staging-00040-w9z`, 100% traffic, private IAM and full index readiness.
+- 2026-10-04: Phase 1 is complete. `phase-one-acceptance-final.json` passes all
+  acceptance checks: full frozen/current vectors, 40 labelled requests, 17
+  user-reviewed lists, zero hard violations or duplicates, four correct empties,
+  36/40 relevant top-three results (90%), matching zero-paid replay (112 cache
+  hits), and staging p95 5.530 s. Jev accounting is $0.92805 against the approved
+  $2 cap, including the conservative $0.80 staging reserve; exact staging token
+  usage is not exposed. Voyage remains under the user's unrestricted approval.
+  Frozen catalog and result hashes remain recorded above. Phase 2 has not started.
+- 2026-10-04: [PR 56](https://github.com/Efeblk/event_recommender/pull/56)
+  merged as `88492e1` and deployed (37214269011). Indexing runs hourly with a
+  daily window (`GCP_STAGING_INDEXING_UNTIL=open`, 96 calls). First hourly run
+  37225790152 succeeded with 0 pending documents. Phase 2 started.
+- 2026-10-04: PR 57 adds the hourly `monitor` job and the recovery steps.
+  The 7-day unattended run starts at its merge. No deploy is needed: the runtime
+  is unchanged.
+- 2026-10-05: Kept GitHub as the collection clock. PR 58 (Cloud Scheduler
+  dispatch) was reverted in PR 59. Cloud Monitoring emails if the authenticated
+  `/api/ready` uptime check fails or no collection is published for 14 h
+  (`docs/gcp-collector.md`). The unused Cloud SQL instance, its secrets and
+  identity were deleted (PR 60).
+- 2026-10-05: Two collection faults were seen and fixed; the catalog never
+  expired. Run 37291537657 failed with import HTTP 400: carried-forward
+  retirement stamps were older than the server's 72 h limit (fixed in PR 61).
+  Run 37296836433 hit the 60-minute job limit during a 20-minute import; the job
+  now has 90 minutes (PR 62). Collection
+  [37304234732](https://github.com/Efeblk/event_recommender/actions/runs/37304234732)
+  succeeded: 8,788 eligible events, `lastCheckedAt` 2026-10-05T12:19:09Z.
+  No deploy; the runtime is unchanged.
+- 2026-10-05: The user approved opening staging for 24 h to friends. At 13:46 UTC
+  `allUsers` received `roles/run.invoker` and `BIPLAN_PREVIEW_TESTING=true`
+  (revision `biplan-staging-00041-4hr`, same image `88492e1`) turned off the
+  shared visitor limit. `AI_DAILY_LIMIT=100` still applies (at most about $2/day).
+  Admin endpoints return 401 without the sync token. Close at 2026-10-06 13:47
+  UTC: remove the `allUsers` binding and set `BIPLAN_PREVIEW_TESTING=false`.
+  Five live searches before opening returned correct results.
+- 2026-10-05: A staging search "yarın iki kişilik sevgilimle taksim civarı
+  konser olmayan etkinlik" returned `unsupported_constraint`. The parser's
+  unsupported-clause judgment (`unsupported_s0`) scored "konser olmayan" at
+  0.58–0.66 (limit 0.55). Taksim and "sevgilimle" were not the cause. The
+  question now names an excluded event type, topic or genre as supported.
+  The sentence then scores 0.28; valet and smoke-free venue requests stay
+  unsupported. Parser benchmark (200 cases, live, about $0.04 in total): 186
+  before and 186 after; unsupported 40/40 in both runs; false unsupported 2 → 1.
+  One borderline ambiguous case (`en-ambiguous-12`) changed on an unrelated
+  edit judgment. Not deployed yet.
+- 2026-10-05: Deployed `9102e0b` to staging (run
+  [37377931807](https://github.com/Efeblk/event_recommender/actions/runs/37377931807)).
+  The deploy removed `allUsers` and set `BIPLAN_PREVIEW_TESTING=false`. Both were
+  restored for the approved 24 h test on revision `biplan-staging-00044-85f`
+  (same image). The test still closes at 2026-10-06 13:47 UTC. The live search
+  "yarın iki kişilik sevgilimle taksim civarı konser olmayan etkinlik" returned
+  16 cards for 2026-10-07: Beyoğlu hard, Taksim preferred, no concerts. Source
+  review found one duplicate: "Stand Up Açık Mikrofon Beyoğlu Çarşamba"
+  (Biletix) and "Stand Up Taksim Gecesi & Açık Mikrofon Çarşamba" (Bubilet).
+  Both are İnfiniti Sahne at 20:30 with the same programme. This is open.
+- 2026-10-06: Duplicate fix for the İnfiniti Sahne open-mic night. One title
+  seed joins the Biletix, Bubilet and Biletinial titles for the same Wednesday
+  and Thursday 20:30 sessions. "Bi Şaka" stays a separate show. Audit of the
+  2026-10-05T12:38 staging checkpoint (14,416 listings): sessions 11,288 →
+  11,272. Unreviewed splits stay at the same 8; same-provider sessions stay 0.
+  `audit-identity-snapshot.ts` now lists the unresolved same-venue,
+  same-time title pairs (439 pairs, 1,108 session pairs) for source review.
+  The fix applies after a deploy and the next collection publication.
+- 2026-10-06: Deployed `58b76e2` to staging (run
+  [37381425679](https://github.com/Efeblk/event_recommender/actions/runs/37381425679)).
+  GitHub did not fire the scheduled collector runs from 23:47 to 02:47 UTC.
+  Monitor run [37408484720](https://github.com/Efeblk/event_recommender/actions/runs/37408484720)
+  failed on a 15 h old catalog. Collection
+  [37423794561](https://github.com/Efeblk/event_recommender/actions/runs/37423794561)
+  published the catalog at 07:07 UTC. The same search returned 16 cards for
+  2026-10-07. The open-mic night is now one card with Biletix, Biletinial and
+  Bubilet offers. "Bi Şaka Stand Up" stays a separate card. No duplicates.
+  The friends test closed at 13:56 UTC: `allUsers` removed and
+  `BIPLAN_PREVIEW_TESTING=false` on revision `biplan-staging-00047-m8n`.
+  Anonymous requests return 403.
+- 2026-10-06: User approved a second 24 h friends test. Opened at 14:12 UTC
+  on revision `biplan-staging-00048-vfx` (image `58b76e2`): `allUsers`
+  run.invoker and `BIPLAN_PREVIEW_TESTING=true`. Catalog published 07:07 UTC.
+  An anonymous search for the same request returned 15 cards. The borderline
+  "Bu Gece Boğazdayız" card dropped out. The test closes at 2026-10-07
+  14:12 UTC: remove `allUsers` and set `BIPLAN_PREVIEW_TESTING=false`.
+- 2026-10-06: New request parser (field reader). The span-first parser dropped
+  conditions its patterns did not know (the friends-test search "iki gün sonra
+  taksim civarı sevgilimle gidebileceğim etkinlik" lost its date). The field
+  reader asks Jev for each supported field of the whole message and lets code
+  resolve it. PR #70 (day-count patterns for the old parser) is closed.
+  Benchmarks, `jev-1.13.0`, about $0.66 of Jev calls:
+  - Frozen 200-case plan benchmark (written for the old parser, which scores
+    186/200 on it): 179/200. Clear 117/120, unsupported 40/40, ambiguous
+    22/40. Of the 21 failures, 8 differ only by product policy, the same as
+    the old parser (bare budgets as ticket prices, romantic as a preference).
+  - New realistic first-turn set (`web/parser/bench/realistic-v1.mjs`, 40
+    requests, written after the reader): old parser 30/40, all failures
+    dropped conditions; field reader 36/40 on the first run, 37/40 after
+    fixes that the set prompted, so the set is no longer independent.
+  Median parse time 0.43 s (about 17k input tokens, $0.0007 per request).
+- 2026-10-06: Deployed `b2d435d` (field reader, PR #71) to staging (run
+  [37492849530](https://github.com/Efeblk/event_recommender/actions/runs/37492849530)).
+  The friends test was restored on `biplan-staging-00050-ckl` and still closes
+  at 2026-10-07 14:12 UTC. Live searches, cards reviewed against date,
+  district and type: "iki gün sonra taksim civarı sevgilimle..." now has the
+  date (11 cards, 2026-10-08, Beyoğlu); "yarın iki kişilik sevgilimle taksim
+  civarı konser olmayan etkinlik" 14 cards, no concerts, one open-mic card;
+  "bu cuma akşamı kadıköyde caz konseri, kişi başı 600 tl'yi geçmesin" 1 card
+  (21:30, 500 TL); "fikirtepe civarında bu hafta sonu ne var" 8 Kadıköy cards
+  (Fikirtepe is not in the neighbourhood list). "önümüzdeki 10 gün içinde
+  ücretsiz sergiler" was empty: no listing confirms a free price. The first
+  request after the deploy took 29 s (cold start); later ones 1–3 s.
+- 2026-10-06: Request log for parser evaluation and training. It is active only
+  while an approved staging test runs and the page shows a notice.
+- 2026-10-06: Deployed `871aa91` (request log, PR #73) to staging (run
+  [37504718574](https://github.com/Efeblk/event_recommender/actions/runs/37504718574)),
+  revision `biplan-staging-00052-hck` with the friends test restored. The
+  first logged user search, "üç gün sonra sevgilimle gideceğimiz 1000tl kişi
+  başı taksim civarı konser olmayan etkinlik", asked for clarification: the
+  number finder needed a space after digits, so "1000tl" had no candidate, and
+  "Taksim civarı" made the price "around". Fix: every digit run is a
+  candidate; the budget question limits "civarı" to the word before it. The
+  search now reads 2026-10-09, Beyoğlu (Taksim preferred), partner, no
+  concerts, at most 1000 TL per person. Realistic set: 36/40 (Jev variance on
+  three earlier failures and "bu ay").
+- 2026-10-06: [PR 75](https://github.com/Efeblk/event_recommender/pull/75)
+  makes each request independent, as the user requested. The page sends only
+  the current message. The API ignores old plans, history, filters, pending
+  text and event IDs. The server selects the parser protocol. Editing uses the
+  full message. Retries send the same request. Each new search clears old results.
+  Local checks passed on Node 22.23.3: 815 unit tests, typecheck, lint, Node
+  build/smoke, 46 deployment checks and 31 browser checks (one viewport skip).
+  The T3 browser confirmed two message-only requests and replacement of the
+  first result. No paid calls. Failed browser logs and traces stay in
+  `web/work/request-isolation/`. The 40-case golden preparation passed on the
+  frozen catalog (`web/work/phase-one/request-isolation-preparation.json`).
+  `tr25` and `en15` now state all conditions. The revised fixture needs user
+  review before a new scored run. The scored attempt stopped at that gate.
+  CI and merge remain pending. Local GCP sign-in has expired. Staging deployment
+  remains pending; the approved friends-test window stays as it is.
+- 2026-10-07: PR 75 merged as `60e38d0`. Exact master CI passed (run
+  [37524716202](https://github.com/Efeblk/event_recommender/actions/runs/37524716202)).
+  Staging deployment passed (run
+  [37535356620](https://github.com/Efeblk/event_recommender/actions/runs/37535356620)).
+  Revision `biplan-staging-00055-j9k` serves the independent-request fix.
+  Its SHA and image digest match the deployment provenance artifact.
+  Anonymous `/api/health` and `/api/ready` return 200. Readiness is true with
+  8,835 eligible events. The T3 browser also opened the live health endpoint.
+  The friends test has `allUsers` run.invoker and `BIPLAN_PREVIEW_TESTING=true`.
+  It still closes at 2026-10-07 14:12 UTC. No paid calls. Deployment provenance
+  and live checks stay in `web/work/request-isolation/`.
+- 2026-10-07: Correction to the entry above. Revision `biplan-staging-00055-j9k`
+  had `BIPLAN_PREVIEW_TESTING=false`, so `/api/site` returned
+  `requestLog: false`. Revision `00056-bnc` had the setting but served no
+  traffic. At 21:55 UTC, revision `biplan-staging-00057-mz9` (same SHA, setting
+  `true`) took 100% of traffic. `/api/site` now returns `requestLog: true`.
+  Searches from about 21:42 to 21:55 UTC were not logged. `allUsers` access
+  stayed on. No paid calls.
+- 2026-10-07: Cloud alert `biplan-staging-catalog-not-refreshed` fired at
+  10:30 UTC. Collection [37579681745](https://github.com/Efeblk/event_recommender/actions/runs/37579681745)
+  failed with import HTTP 400. Seven carried-forward Bubilet records had
+  `checkedAt` older than the server's 72 h limit. The publisher now omits
+  stale observations with a 1 h transit margin and checks each batch again.
+  It keeps the original timestamps and does not retire stale pages.
+  Node 22.23.3 collector checks passed: 279 tests, one skip, no failures.
+  Offline replay validated all 4,404 importable pages from the preserved run.
+  [PR 78](https://github.com/Efeblk/event_recommender/pull/78) contains the fix.
+  Recovery published the preserved report and passed canonical readback:
+  saved at 11:14 UTC, original collection finished at 06:46 UTC, 14,625 records.
+  Live readiness returned 200 with 8,819 eligible events, no pending
+  publication and a 4.49 h catalog age. Seven stale records were omitted.
+  No timestamps were reset. No paid calls. Private evidence remains under
+  `gs://biplan-staging-efeblk-biplan-staging-data/operations/cloud-alarm-2026-10-07/`.
+- 2026-10-07: Collection [37629077159](https://github.com/Efeblk/event_recommender/actions/runs/37629077159)
+  failed at checkpoint publication with HTTP 503. Two Bubilet URL changes left
+  24 session IDs on old and new pages. The publisher now keeps the newer record
+  only when both full provider identities validate and match. Ambiguous IDs
+  still fail. Replay of all 5,419 staged pages passed: 14,699 records became
+  14,675 unique records. [PR 79](https://github.com/Efeblk/event_recommender/pull/79)
+  contains the fix. Node 22.23.3 checks passed: 818 web tests, typecheck, lint,
+  46 deployment checks, GCP configuration, Node build and smoke. Golden
+  preparation passed; the scored offline attempt stopped at the existing
+  fixture review gate. No paid calls. CI, merge and staging recovery are
+  pending. Preserved evidence:
+  `gs://biplan-staging-efeblk-biplan-staging-data/operations/checkpoint-failure-37629077159/`.
+- 2026-10-07: PR 79 merged as `05c93e6`. Exact PR CI
+  [37680849544](https://github.com/Efeblk/event_recommender/actions/runs/37680849544)
+  passed on attempt 2. Attempt 1 timed out at the Ubuntu package mirror during
+  browser setup; its log is preserved. Exact master CI
+  [37683534225](https://github.com/Efeblk/event_recommender/actions/runs/37683534225)
+  and staging deploy
+  [37684310454](https://github.com/Efeblk/event_recommender/actions/runs/37684310454)
+  passed. Revision `biplan-staging-00058-9jn` matches the reviewed image digest.
+  Recovery saved the original 14:11 UTC collection report at 20:51 UTC.
+  Canonical readback has 14,675 unique IDs. All 24 alias records match the newer
+  source URLs and original observation times. Readiness returned 200 with
+  8,731 eligible events and no pending publication. The expired friends test
+  is closed: no public invoker, preview logging off, anonymous health returns
+  403. No paid calls. The same private evidence directory holds the deployment
+  provenance, recovery receipt, checkpoint hash and live readiness responses.

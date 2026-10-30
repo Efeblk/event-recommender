@@ -1,0 +1,21 @@
+# Dependencies and builds
+node_modules/
+dist/
+
+# Local settings and secrets
+.env
+.env.local
+.env.*.local
+
+# Editors and OS
+.vscode/
+.idea/
+*.swp
+*~
+.DS_Store
+Thumbs.db
+
+# Logs and local caches
+*.log
+.claude/
+.archive/
