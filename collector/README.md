@@ -39,8 +39,8 @@ Unknown availability and unknown prices remain explicit.
 `state/events.json` is the workflow's local checkpoint.
 Raw provider pages stay in ignored local storage or an explicitly configured private mirror.
 The workflow excludes `state/raw/` from public artifacts. It keeps JSON reports.
-PostgreSQL preparation is frozen. Its workflow step is removed.
-The code in `db/`, `jobs/` and `preparation/` remains for later work.
+PostgreSQL preparation is outside v1. Its code (`db/`, `jobs/` and `preparation/`)
+stays in [`Efeblk/event_recommender@469b188`](https://github.com/Efeblk/event_recommender/tree/469b188e36c51df9a01b8f65bf83e2e99510698a/collector).
 
 ## Import and checkpoint
 
@@ -74,6 +74,5 @@ npm test
 ```
 
 Tests use saved fixtures. They do not fetch providers or make paid calls.
-The opt-in PostgreSQL integration test remains disabled unless explicitly selected.
 [Historical collector instructions](https://github.com/Efeblk/event_recommender/blob/bad42d030850e92bfb4e3cdc2f3dc92dcde155ca/collector/README.md)
 describe the removed Cloudflare workflow. Saved reports retain their original results.

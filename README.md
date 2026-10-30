@@ -8,7 +8,7 @@ The application runs on Node in GCP Cloud Run.
 Firestore holds catalog pointers, leases and request limits.
 Private Cloud Storage holds catalog checkpoints and cached vectors.
 The collector supports Biletinial, Bubilet and Biletix.
-PostgreSQL code remains frozen in its current folders. It is outside v1.
+PostgreSQL is outside v1. Its code stays in the old repository (see below).
 
 ## Repository history
 

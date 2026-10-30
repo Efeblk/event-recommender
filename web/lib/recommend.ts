@@ -31,7 +31,6 @@ import {
 } from './input-state.ts';
 import { interpretInput } from './input-interpreter.ts';
 import { recommendationQuery, retrievalQuery } from './input-retrieval.ts';
-import type { CatalogStatus } from './storage-contract.ts';
 import {
   emptyPlanState,
   MAX_PLAN_REQUESTS,
@@ -202,20 +201,6 @@ export interface Dependencies {
   inputReader?: 'fields' | 'v3';
   spanInterpret?: typeof interpretSpanInput;
   interpret?: typeof interpretInput;
-  pinCatalog?: (now: Date) => Promise<PinnedRecommendationCatalog | null>;
-}
-
-export interface PinnedRecommendationCatalog {
-  publicationId: string;
-  /** Current request-time gate. Implementations must not cache this result. */
-  availability?: () => Promise<boolean>;
-  /** Full diagnostics for this exact pin; called only after availability fails. */
-  catalogStatus?: () => Promise<CatalogStatus>;
-  candidates: Dependencies['candidates'];
-  vectors: NonNullable<Dependencies['vectors']>;
-  dense?: Dependencies['dense'];
-  finalize: (events: EventRecord[]) => Promise<EventRecord[]>;
-  emptyResultNotice?: () => string | undefined;
 }
 
 // Initial product policy, not an empirically calibrated quality claim.
@@ -293,88 +278,6 @@ const issueNotices = {
 };
 
 export async function recommend(
-  input: RecommendInput,
-  deps: Dependencies,
-): Promise<SearchResult> {
-  const pinned = await deps.pinCatalog?.(deps.now ?? new Date());
-  let unavailableCatalog: CatalogStatus | undefined;
-  let availabilityFailed = false;
-  const pinnedCandidates = pinned
-    ? async (filters: Filters) => {
-        if (pinned.availability && !(await pinned.availability())) {
-          availabilityFailed = true;
-          unavailableCatalog = await pinned.catalogStatus?.();
-          return [];
-        }
-        return pinned.candidates(filters);
-      }
-    : undefined;
-  const result = await recommendUnpinned(
-    input,
-    pinned
-      ? {
-          ...deps,
-          candidates: pinnedCandidates!,
-          vectors: pinned.vectors,
-          dense: pinned.dense,
-        }
-      : deps,
-  );
-  if (!pinned) return result;
-  const before = result.recommendations.map((item) => item.event);
-  const admitted = await pinned.finalize(before);
-  const allowed = new Set(admitted.map((event) => event.id));
-  // Use our pinned card objects. A validator may exclude an ID but cannot
-  // substitute facts from a later generation or inject a new candidate.
-  const recommendations = result.recommendations.filter((item) =>
-    allowed.has(item.event.id),
-  );
-  const withheld = recommendations.length < before.length;
-  return {
-    ...result,
-    publicationId: pinned.publicationId,
-    recommendations,
-    ...(availabilityFailed && result.status === 'empty'
-      ? {
-          notice:
-            unavailableCatalog?.status === 'empty'
-              ? 'Yayınlanmış etkinlik kataloğu şu anda boş.'
-              : 'Yayınlanmış etkinliklerin güncel kaynak durumu doğrulanamadı. Biraz sonra yeniden deneyebilirsin.',
-        }
-      : {}),
-    ...(!recommendations.length &&
-    result.status === 'empty' &&
-    pinned.emptyResultNotice?.()
-      ? { notice: pinned.emptyResultNotice() }
-      : {}),
-    ...(withheld
-      ? {
-          status: recommendations.length
-            ? ('results' as const)
-            : ('empty' as const),
-          notice: [
-            result.notice,
-            'Bazı etkinliklerin güncel durumu değişti; doğrulanamayan seçenekleri göstermiyoruz.',
-          ]
-            .filter(Boolean)
-            .join(' '),
-        }
-      : {}),
-    ...(result.diagnostics
-      ? {
-          diagnostics: {
-            ...result.diagnostics,
-            returnedAboveSupportThreshold:
-              result.diagnostics.returnedAboveSupportThreshold === null
-                ? null
-                : recommendations.length,
-          },
-        }
-      : {}),
-  };
-}
-
-async function recommendUnpinned(
   input: RecommendInput,
   deps: Dependencies,
 ): Promise<SearchResult> {
