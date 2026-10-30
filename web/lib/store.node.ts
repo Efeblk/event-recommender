@@ -1,0 +1,213 @@
+import { env } from './runtime-env.node.ts';
+import { createGcpClients } from './gcp-clients.node.ts';
+import { createGcpStore } from './store.gcp.ts';
+import { clientIp } from './client-ip.node.ts';
+import {
+  consumeBuckets,
+  requestLimitBuckets,
+  type LimitConsumer,
+} from './rate-limit.ts';
+import { embeddingText } from './ai.ts';
+import { embeddingCacheKey, type EmbeddingConfig } from './providers.ts';
+import type { EventRecord } from './types.ts';
+import type { HighLevelStore } from './storage-contract.ts';
+import { indexAuditedBatch, type AuditedIndexInput } from './audited-index.ts';
+import { labelEventBatch, labelStatus, type LabelIndexInput } from './event-label-index.ts';
+import type { JevConfig } from './jev.ts';
+import { voyageConfigFrom, voyageCacheKey, type VoyageConfig } from './voyage.ts';
+import type { Lease } from './storage-contract.ts';
+import { createPostgresCatalog } from './postgres-catalog.node.ts';
+import { createPipelineCatalog } from './pipeline-catalog.node.ts';
+import { requestLogKey, type RequestLogEntry } from './request-log.ts';
+export type { RateLimitResult } from './rate-limit.ts';
+
+export function runtime() {
+  return env;
+}
+let instance: Promise<HighLevelStore> | undefined;
+let clients: ReturnType<typeof createGcpClients> | undefined;
+let postgres: ReturnType<typeof createPostgresCatalog> | ReturnType<typeof createPipelineCatalog> | undefined;
+function postgresCatalog() {
+  const backend = env.CATALOG_BACKEND ?? 'snapshots';
+  if (backend === 'snapshots') return null;
+  if (!['postgres', 'pipeline'].includes(backend)) throw new Error('Unsupported catalog backend');
+  return postgres ??= backend === 'pipeline' ? createPipelineCatalog(env) : createPostgresCatalog(env);
+}
+/** Stores one request log entry in the collection bucket. */
+export async function logRequest(entry: RequestLogEntry) {
+  const { blobs } = await storageClients();
+  await blobs.putImmutable(requestLogKey(env.DEPLOYMENT_ENV ?? 'default', entry), JSON.stringify(entry));
+}
+export async function pinRecommendationCatalog(now: Date) {
+  return postgresCatalog()?.pin(now) ?? null;
+}
+export async function preparedCatalogReadiness() {
+  return postgresCatalog()?.readiness() ?? null;
+}
+function storageClients() {
+  return (clients ??= createGcpClients(env).catch((error) => {
+    clients = undefined;
+    throw error;
+  }));
+}
+function store() {
+  return (instance ??= storageClients()
+    .then((clients) => {
+      const voyage = voyageConfigFrom({
+        VOYAGE_API_KEY: env.VOYAGE_API_KEY,
+        VOYAGE_MODEL: env.VOYAGE_MODEL,
+        VOYAGE_DIMENSIONS: env.VOYAGE_DIMENSIONS,
+      });
+      return createGcpStore({ ...clients, namespace: env.DEPLOYMENT_ENV,
+        ...(voyage ? { embeddingProfile: { profile: voyageCacheKey(voyage), dimensions: voyage.dimensions } } : {}),
+      });
+    })
+    .catch((error) => {
+      instance = undefined;
+      throw error;
+    }));
+}
+export async function auditedVoyageIndex(
+  config: VoyageConfig,
+  input: AuditedIndexInput,
+  lease: Lease,
+) {
+  return indexAuditedBatch(config, input, lease, {
+    ...(await storageClients()),
+    store: await store(),
+    namespace: env.DEPLOYMENT_ENV ?? '',
+    revision: env.DEPLOYMENT_SHA ?? '',
+    secrets: [env.SYNC_TOKEN, env.TYPESAFE_API_KEY, env.VOYAGE_API_KEY].filter(
+      (v): v is string => Boolean(v),
+    ),
+  });
+}
+export async function eventLabelIndex(
+  config: JevConfig,
+  input: LabelIndexInput,
+  lease: Lease,
+) {
+  return labelEventBatch(config, input, lease, {
+    control: (await storageClients()).control,
+    store: await store(),
+    namespace: env.DEPLOYMENT_ENV ?? '',
+  });
+}
+export async function eventLabelIndexStatus() {
+  return labelStatus(await store(), (await storageClients()).control, env.DEPLOYMENT_ENV ?? '', new Date());
+}
+export const candidates: HighLevelStore['candidates'] = async (...args) =>
+  (await store()).candidates(...args);
+export const embeddingCandidates: HighLevelStore['embeddingCandidates'] = async (...args) =>
+  (await store()).embeddingCandidates(...args);
+export const activateSearchCatalog: HighLevelStore['activateSearchCatalog'] = async (...args) =>
+  (await store()).activateSearchCatalog(...args);
+export const catalogStatus: HighLevelStore['catalogStatus'] = async (...args) =>
+  postgresCatalog()?.catalogStatus(...args) ?? (await store()).catalogStatus(...args);
+export const health: HighLevelStore['health'] = async (...args) =>
+  (await store()).health(...args);
+export const consumeLimit: HighLevelStore['consumeLimit'] = async (...args) =>
+  (await store()).consumeLimit(...args);
+export const acquireLease: HighLevelStore['acquireLease'] = async (...args) =>
+  (await store()).acquireLease(...args);
+export const releaseLease: HighLevelStore['releaseLease'] = async (...args) =>
+  (await store()).releaseLease(...args);
+export const importPages: HighLevelStore['importPages'] = async (...args) =>
+  (await store()).importPages(...args);
+export const checkpointPointer: HighLevelStore['checkpointPointer'] = async (
+  ...args
+) => (await store()).checkpointPointer(...args);
+export const readCheckpoint: HighLevelStore['readCheckpoint'] = async (
+  ...args
+) => (await store()).readCheckpoint(...args);
+export const publishCheckpoint: HighLevelStore['publishCheckpoint'] = async (
+  ...args
+) => (await store()).publishCheckpoint(...args);
+export const checkpointPublication = async () =>
+  (await store()).checkpointPublication?.() ?? null;
+export const checkpointExists: HighLevelStore['checkpointExists'] = async (
+  ...args
+) => (await store()).checkpointExists(...args);
+export const currentPublished: HighLevelStore['currentPublished'] = async (
+  ...args
+) => (await store()).currentPublished(...args);
+export const voyageVectorsByHash: HighLevelStore['voyageVectorsByHash'] =
+  async (...args) => (await store()).voyageVectorsByHash(...args);
+export const saveVoyageVectors: HighLevelStore['saveVoyageVectors'] = async (
+  ...args
+) => (await store()).saveVoyageVectors(...args);
+export function collectionStateConfigured() {
+  return Boolean(env.GCP_STORAGE_BUCKET && env.BIPLAN_GCP_PROJECT);
+}
+
+export async function digest(text: string) {
+  return Array.from(
+    new Uint8Array(
+      await crypto.subtle.digest('SHA-256', new TextEncoder().encode(text)),
+    ),
+    (n) => n.toString(16).padStart(2, '0'),
+  ).join('');
+}
+export async function requestRateLimit(
+  request: Request,
+  paid: boolean,
+  now = Date.now(),
+  consume: LimitConsumer = consumeLimit,
+) {
+  return consumeBuckets(
+    requestLimitBuckets(await digest(clientIp(request, env)), paid, now),
+    now,
+    consume,
+  );
+}
+export async function aiDailyRateLimit(
+  now = Date.now(),
+  configuredValue = env.AI_DAILY_LIMIT,
+  consume: LimitConsumer = consumeLimit,
+) {
+  const day = Math.floor(now / 86400000),
+    configured = Number(configuredValue || 100);
+  const cap = Number.isFinite(configured)
+    ? Math.max(1, Math.min(10000, configured))
+    : 100;
+  return consumeBuckets(
+    [
+      {
+        key: `ai:${day}`,
+        limit: cap,
+        expiresAt: (day + 1) * 86400000,
+        scope: 'daily',
+      },
+    ],
+    now,
+    consume,
+  );
+}
+export async function vectorsFor(
+  events: EventRecord[],
+  config: EmbeddingConfig,
+) {
+  const documents = await Promise.all(
+    events.map(async (event) => ({
+      id: event.id,
+      hash: await digest(embeddingText(event)),
+    })),
+  );
+  const cached = await voyageVectorsByHash(
+    `legacy:${embeddingCacheKey(config)}`,
+    documents.map((d) => d.hash),
+    config.dimensions,
+  );
+  return new Map(
+    documents.flatMap((d) =>
+      cached.has(d.hash) ? [[d.id, cached.get(d.hash)!] as const] : [],
+    ),
+  );
+}
+// GCP uses collector/ imports followed by an explicit checkpoint publication.
+export async function legacySync(_request: Request) {
+  return Response.json(
+    { error: 'Use the collector import and checkpoint pipeline on GCP' },
+    { status: 410 },
+  );
+}
