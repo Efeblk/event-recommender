@@ -58,3 +58,13 @@ export async function consumeBuckets(
       };
   return { allowed: true, retryAfter: 0, scope: null };
 }
+
+/** Limits for one signed-in user, on top of the visitor IP limits. */
+export function userLimitBuckets(uid: string, now: number) {
+  const minute = Math.floor(now / 60000),
+    hour = Math.floor(now / 3600000);
+  return [
+    { key: `user-minute:${uid}:${minute}`, limit: 6, expiresAt: (minute + 1) * 60000, scope: 'minute' as const },
+    { key: `user-hour:${uid}:${hour}`, limit: 60, expiresAt: (hour + 1) * 3600000, scope: 'hour' as const },
+  ];
+}

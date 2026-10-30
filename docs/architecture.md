@@ -14,19 +14,30 @@ Cloud Run: Node service (web/)
   ├─ /api/agent ── ADK Runner ── root LlmAgent (Gemini)
   │                               ├─ search_events      → search pipeline (below)
   │                               ├─ get_event_details  → catalog store
+  │                               ├─ plan_outing        → timeline checks + plan_route
   │                               ├─ plan_route         → Google Maps Routes API
   │                               ├─ get_weather        → Open-Meteo
   │                               └─ save_plan / list_plans / save_favorite → Firestore
+  ├─ /api/me/plans, /api/me/favorites → Firestore (signed-in user only)
   └─ /api/health, /api/ready, /api/admin/*
 Cloud Run job: collector (scheduled) → catalog snapshot (Cloud Storage + Firestore)
 ```
 
 - `web/agent/` holds the ADK agent, its instruction and the tool definitions.
   Each tool has an input schema and returns typed data.
-- The ADK session service stores conversation state. Sprint 1 keeps sessions
-  in process memory (`BoundedSessionService`). Sprint 2 moves them to
-  Firestore. Users, plans and favorites are Firestore collections keyed by
-  the Firebase user ID.
+- The ADK session service stores conversation state.
+  `DocumentSessionService` (`web/agent/sessions.ts`) writes each session to
+  `envs/{env}/agentSessions/{sha256(app, user, session)}` and checks the
+  owner on read. It keeps at most 60 events and 600 KB, and sets `expiresAt`
+  for a Firestore TTL policy. Without Firestore settings,
+  `BoundedSessionService` keeps sessions in process memory.
+- `web/lib/auth.ts` checks Firebase ID tokens on the server (RS256 with
+  Google certificates, `aud`, `iss`, `exp`). Plans and favorites are stored at
+  `envs/{env}/users/{uid}/...` (`web/lib/user-store.ts`). Write tools get the
+  user ID from the verified token, never from the model.
+- `web/agent/planner.ts` builds the outing timeline in code. It finds
+  overlaps, too-short travel gaps and events on different days. `save_plan`
+  refuses a plan with overlap or travel conflicts.
 - `web/lib/search-deps.ts` builds the search dependencies for both
   `/api/recommend` and `search_events`.
 - `/api/agent` streams agent events. The UI renders text from the model and

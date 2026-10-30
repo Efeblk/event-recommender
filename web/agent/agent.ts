@@ -11,6 +11,8 @@ import type { AgentModelConfig } from './config.ts';
 import { agentInstruction } from './instruction.ts';
 
 export const AGENT_APP_NAME = 'biplan';
+/** Session owner for visitors who are not signed in. Firebase IDs never contain ':'. */
+export const ANONYMOUS_USER = 'visitor:anonymous';
 
 export function geminiModel(config: AgentModelConfig): BaseLlm {
   return new Gemini(

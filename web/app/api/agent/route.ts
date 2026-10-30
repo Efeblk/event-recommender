@@ -2,6 +2,7 @@ import {
   aiDailyRateLimit,
   candidates,
   catalogStatus,
+  consumeLimit,
   requestRateLimit,
   runtime,
   type RateLimitResult,
@@ -9,7 +10,7 @@ import {
 import { recommendRequest } from '@/lib/recommend';
 import { searchDependencies } from '@/lib/search-deps';
 import { catalogAllowsRecommendations } from '@/lib/catalog-readiness';
-import { visitorRateLimitEnabled } from '@/lib/rate-limit';
+import { consumeBuckets, userLimitBuckets, visitorRateLimitEnabled } from '@/lib/rate-limit';
 import { publicEventRecord } from '@/lib/catalog';
 import { emptyFilters } from '@/lib/types';
 import {
@@ -18,17 +19,27 @@ import {
 } from '@/lib/request-body';
 import { DeadlineExceededError, withDeadline } from '@/lib/deadline';
 import { agentModelConfigFrom } from '@/agent/config';
-import { geminiModel, BoundedSessionService } from '@/agent/agent';
+import { geminiModel } from '@/agent/agent';
 import { agentTurnStream } from '@/agent/stream';
 import { validateAgentTurn } from '@/agent/turn';
 import { findEvents } from '@/agent/tools/event-details';
+import { bearerToken } from '@/lib/auth';
+import { agentSessionService, requestUser, userStore } from '@/lib/user-data.node';
+import { createRouteLookup, routesConfigFrom, type RouteLookup } from '@/lib/routes';
+import { createWeatherLookup } from '@/lib/weather';
 
 const MAX_REQUEST_BYTES = 8_000;
 const REQUEST_BODY_TIMEOUT_MS = 5_000;
 const TURN_BUDGET_MS = 60_000;
-const ANONYMOUS_USER = 'anonymous';
 
-const sessions = new BoundedSessionService();
+const weather = createWeatherLookup();
+let routes: { key: string; lookup: RouteLookup } | undefined;
+function routeLookup() {
+  const config = routesConfigFrom(runtime());
+  if (!config) return null;
+  if (routes?.key !== config.apiKey) routes = { key: config.apiKey, lookup: createRouteLookup(config) };
+  return routes.lookup;
+}
 
 const noStore = { 'Cache-Control': 'no-store' };
 const failure = (status: number, code: string, error: string, headers = {}) =>
@@ -61,9 +72,16 @@ export async function POST(request: Request) {
     const config = agentModelConfigFrom(runtime());
     if (!config)
       return failure(503, 'agent_unavailable', 'The assistant is not configured.');
+    const user = await requestUser(request);
+    if (bearerToken(request) && !user)
+      return failure(401, 'invalid_token', 'Sign-in expired. Sign in again.');
     if (visitorRateLimitEnabled(runtime())) {
       const requestLimit = await requestRateLimit(request, true);
       if (!requestLimit.allowed) return limited(requestLimit);
+      if (user) {
+        const userLimit = await consumeBuckets(userLimitBuckets(user.uid, Date.now()), Date.now(), consumeLimit);
+        if (!userLimit.allowed) return limited(userLimit);
+      }
     }
     const now = new Date();
     const catalog = await catalogStatus(now);
@@ -79,9 +97,9 @@ export async function POST(request: Request) {
     const signal = AbortSignal.any([controller.signal, request.signal]);
     const body = agentTurnStream({
       input,
-      userId: ANONYMOUS_USER,
+      userId: user?.uid ?? null,
       model: geminiModel(config),
-      sessionService: sessions,
+      sessionService: await agentSessionService(),
       signal,
       onFinish: () => clearTimeout(timer),
       tools: {
@@ -89,6 +107,9 @@ export async function POST(request: Request) {
           recommendRequest({ message }, searchDependencies({ now: new Date(), signal })),
         lookup: async (ids) =>
           findEvents(await candidates(emptyFilters), ids).map(publicEventRecord),
+        route: routeLookup(),
+        weather,
+        userStore,
       },
     });
     return new Response(body, {

@@ -1,10 +1,12 @@
 'use client';
 import Link from 'next/link';
 import { useEffect, useRef, useState } from 'react';
-import { ArrowUp, LoaderCircle, MapPin, RotateCcw } from 'lucide-react';
+import { ArrowUp, Heart, LoaderCircle, RotateCcw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { AgentCard } from '@/components/agent-card';
+import { AuthControl } from '@/components/auth-control';
+import { authHeaders, useAuth } from '@/components/auth';
 import type { AgentEventCard } from '@/agent/cards';
 import type { AgentStreamEvent } from '@/agent/turn';
 
@@ -20,6 +22,12 @@ type Turn = {
 const TOOL_LABELS: Record<string, string> = {
   search_events: 'Etkinlikler aranıyor',
   get_event_details: 'Etkinlik ayrıntıları okunuyor',
+  plan_outing: 'Plan kontrol ediliyor',
+  plan_route: 'Yol süresi hesaplanıyor',
+  get_weather: 'Hava durumuna bakılıyor',
+  save_plan: 'Plan kaydediliyor',
+  list_plans: 'Kayıtlı planlar okunuyor',
+  save_favorite: 'Favorilere ekleniyor',
 };
 const SESSION_KEY = 'biplan.agent.session';
 const MAX_MESSAGE_CHARS = 1000;
@@ -55,6 +63,8 @@ function failureMessage(code: string | undefined) {
     ? 'Asistan henüz yapılandırılmadı.'
     : code === 'rate_limited'
       ? 'Çok fazla istek gönderildi. Biraz sonra yeniden dene.'
+      : code === 'invalid_token'
+        ? 'Oturumun sona erdi. Yeniden giriş yap.'
       : code === 'catalog_unavailable'
         ? 'Etkinlik kataloğu hazır değil. Biraz sonra yeniden dene.'
         : 'Asistan şu anda yanıt veremiyor.';
@@ -71,6 +81,8 @@ export default function PlanPage() {
   const [message, setMessage] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
+  const [favorites, setFavorites] = useState<Record<string, 'saving' | 'saved' | 'failed'>>({});
+  const auth = useAuth();
   const bottom = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -102,7 +114,7 @@ export default function PlanPage() {
     try {
       const response = await fetch('/api/agent', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...(await authHeaders()) },
         body: JSON.stringify({ sessionId: currentSessionId(), message: trimmed }),
       });
       if (!response.ok || !response.body) {
@@ -127,6 +139,20 @@ export default function PlanPage() {
     }
   }
 
+  async function favorite(eventId: string) {
+    setFavorites((current) => ({ ...current, [eventId]: 'saving' }));
+    try {
+      const response = await fetch('/api/me/favorites', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...(await authHeaders()) },
+        body: JSON.stringify({ eventId }),
+      });
+      setFavorites((current) => ({ ...current, [eventId]: response.ok ? 'saved' : 'failed' }));
+    } catch {
+      setFavorites((current) => ({ ...current, [eventId]: 'failed' }));
+    }
+  }
+
   return (
     <div className="site-shell">
       <header className="site-header">
@@ -138,10 +164,9 @@ export default function PlanPage() {
           <Link href="/plan" aria-current="page">
             Plan asistanı
           </Link>
+          {auth.status === 'signed_in' && <Link href="/saved">Kayıtlarım</Link>}
         </nav>
-        <div className="header-city">
-          <MapPin size={14} /> İstanbul
-        </div>
+        <AuthControl />
       </header>
       <main className="agent-page">
         <section className="agent-intro" aria-labelledby="agent-title">
@@ -173,7 +198,28 @@ export default function PlanPage() {
               {turn.cards.length > 0 && (
                 <div className="agent-cards">
                   {turn.cards.map((card) => (
-                    <AgentCard key={card.id} card={card} />
+                    <AgentCard
+                      key={card.id}
+                      card={card}
+                      actions={
+                        auth.status === 'signed_in' ? (
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            disabled={favorites[card.id] === 'saving' || favorites[card.id] === 'saved'}
+                            onClick={() => void favorite(card.id)}
+                          >
+                            <Heart aria-hidden="true" />
+                            {favorites[card.id] === 'saved'
+                              ? 'Kaydedildi'
+                              : favorites[card.id] === 'failed'
+                                ? 'Kaydedilemedi'
+                                : 'Favorilere ekle'}
+                          </Button>
+                        ) : null
+                      }
+                    />
                   ))}
                 </div>
               )}
