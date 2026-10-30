@@ -6,7 +6,6 @@ import {
   logRequest,
   requestRateLimit,
   runtime,
-  pinRecommendationCatalog,
   type RateLimitResult,
 } from '@/lib/store';
 import { jevConfigFrom, rankWithJev } from '@/lib/jev';
@@ -132,17 +131,12 @@ async function postWithinBudget(
       if (!requestLimit.allowed) return limited(requestLimit);
     }
     const now = new Date();
-    const capturedPinned = await measured('publication_pin', () => pinRecommendationCatalog(now));
-    const available = capturedPinned?.availability
-      ? await measured('catalog_availability', () => capturedPinned.availability!())
-      : null;
-    const catalog = available === true ? null : await measured('catalog', () =>
-      available === false && capturedPinned?.catalogStatus ? capturedPinned.catalogStatus() : catalogStatus(now));
-    if (available === false || (catalog && !catalogAllowsRecommendations(catalog.status)))
+    const catalog = await measured('catalog', () => catalogStatus(now));
+    if (!catalogAllowsRecommendations(catalog.status))
       return Response.json(
         {
           error:
-            catalog?.status === 'stale'
+            catalog.status === 'stale'
               ? 'Etkinlik kataloğu yenileniyor. Güncel olmayan sonuçları göstermiyoruz; lütfen biraz sonra yeniden dene.'
               : 'Etkinlik kataloğu henüz hazır değil. Lütfen biraz sonra yeniden dene.',
           code: 'catalog_unavailable',
@@ -165,33 +159,6 @@ async function postWithinBudget(
     let parsed: Awaited<ReturnType<typeof interpretSpanInput>> | null = null;
     const result = await recommendRequest(input, {
       now,
-      pinCatalog: async () => {
-        const pinned = capturedPinned;
-        if (!pinned) return null;
-        return {
-          ...pinned,
-          candidates: (filters) =>
-            measured('candidates', () => pinned.candidates(filters)),
-          vectors: (events, config) =>
-            measured('vectors', () => pinned.vectors(events, config)),
-          ...(pinned.dense
-            ? {
-                dense: {
-                  coverage: (events, config) =>
-                    measured('vector_coverage', () =>
-                      pinned.dense!.coverage(events, config),
-                    ),
-                  rank: (events, config, vector) =>
-                    measured('dense_exact', () =>
-                      pinned.dense!.rank(events, config, vector),
-                    ),
-                },
-              }
-            : {}),
-          finalize: (events) =>
-            measured('source_revalidation', () => pinned.finalize(events)),
-        };
-      },
       candidates: (filters) =>
         measured('candidates', () => candidates(filters)),
       config,

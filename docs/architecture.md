@@ -32,9 +32,7 @@ holds source records before that preparation.
    limits. A lease prevents concurrent writers from replacing newer data.
    Publication changes the pointer only after the complete snapshot exists.
 6. The Cloud Run Node service loads the published catalog for search.
-   `web/lib/store.node.ts` selects the snapshot store by default.
-   `CATALOG_BACKEND=postgres` and `CATALOG_BACKEND=pipeline` are opt-in paths.
-   They are outside v1. The deployed staging workflow uses snapshots.
+   `web/lib/store.node.ts` reads the snapshot store. It is the only backend.
 
 ## Request flow
 
@@ -172,5 +170,6 @@ readiness. A successful health check does not prove catalog readiness.
 GCP deployment runs from the old repository: [GCP deployment](https://github.com/Efeblk/event_recommender/blob/469b188e36c51df9a01b8f65bf83e2e99510698a/docs/gcp-deployment.md) and [GCP collection](https://github.com/Efeblk/event_recommender/blob/469b188e36c51df9a01b8f65bf83e2e99510698a/docs/gcp-collector.md).
 The [archive](https://github.com/Efeblk/event_recommender/tree/469b188e36c51df9a01b8f65bf83e2e99510698a/docs/archive) preserves earlier plans and evidence. Archived documents
 do not define current scope. Cloudflare runtime files and workflows are removed.
-PostgreSQL code stays in its current folders. Its preparation step and dedicated
-CI job are removed. The Node snapshot path remains the v1 runtime.
+The PostgreSQL code is not in this repository. Find it in
+[`Efeblk/event_recommender@469b188`](https://github.com/Efeblk/event_recommender/tree/469b188e36c51df9a01b8f65bf83e2e99510698a).
+The Node snapshot path is the v1 runtime.

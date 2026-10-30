@@ -16,8 +16,6 @@ import { labelEventBatch, labelStatus, type LabelIndexInput } from './event-labe
 import type { JevConfig } from './jev.ts';
 import { voyageConfigFrom, voyageCacheKey, type VoyageConfig } from './voyage.ts';
 import type { Lease } from './storage-contract.ts';
-import { createPostgresCatalog } from './postgres-catalog.node.ts';
-import { createPipelineCatalog } from './pipeline-catalog.node.ts';
 import { requestLogKey, type RequestLogEntry } from './request-log.ts';
 export type { RateLimitResult } from './rate-limit.ts';
 
@@ -26,23 +24,10 @@ export function runtime() {
 }
 let instance: Promise<HighLevelStore> | undefined;
 let clients: ReturnType<typeof createGcpClients> | undefined;
-let postgres: ReturnType<typeof createPostgresCatalog> | ReturnType<typeof createPipelineCatalog> | undefined;
-function postgresCatalog() {
-  const backend = env.CATALOG_BACKEND ?? 'snapshots';
-  if (backend === 'snapshots') return null;
-  if (!['postgres', 'pipeline'].includes(backend)) throw new Error('Unsupported catalog backend');
-  return postgres ??= backend === 'pipeline' ? createPipelineCatalog(env) : createPostgresCatalog(env);
-}
 /** Stores one request log entry in the collection bucket. */
 export async function logRequest(entry: RequestLogEntry) {
   const { blobs } = await storageClients();
   await blobs.putImmutable(requestLogKey(env.DEPLOYMENT_ENV ?? 'default', entry), JSON.stringify(entry));
-}
-export async function pinRecommendationCatalog(now: Date) {
-  return postgresCatalog()?.pin(now) ?? null;
-}
-export async function preparedCatalogReadiness() {
-  return postgresCatalog()?.readiness() ?? null;
 }
 function storageClients() {
   return (clients ??= createGcpClients(env).catch((error) => {
@@ -103,7 +88,7 @@ export const embeddingCandidates: HighLevelStore['embeddingCandidates'] = async 
 export const activateSearchCatalog: HighLevelStore['activateSearchCatalog'] = async (...args) =>
   (await store()).activateSearchCatalog(...args);
 export const catalogStatus: HighLevelStore['catalogStatus'] = async (...args) =>
-  postgresCatalog()?.catalogStatus(...args) ?? (await store()).catalogStatus(...args);
+  (await store()).catalogStatus(...args);
 export const health: HighLevelStore['health'] = async (...args) =>
   (await store()).health(...args);
 export const consumeLimit: HighLevelStore['consumeLimit'] = async (...args) =>

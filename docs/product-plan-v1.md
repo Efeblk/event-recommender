@@ -296,6 +296,8 @@ checks still pass, and the per-request cost does not increase without approval.
   older aliases. Source heads still use URLs. Keep old observation times.
 - PostgreSQL cutover and the target architecture in
   `docs/archive/catalog-enrichment-architecture.md` in Efeblk/event_recommender.
+  The PostgreSQL code is not in this repository. Start again from
+  `Efeblk/event_recommender@469b188` if the cutover returns.
 - More providers. Promotions and discounts.
 - Performance at more than 4 concurrent users. The local benchmark measured a
   p95 of 3.7 s at 4 concurrent requests.
@@ -329,9 +331,6 @@ checks still pass, and the per-request cost does not increase without approval.
 - Review the captured `tr19` audience-fit miss before changing Jev judgments.
   A child-directed concert is weak support for friends who want to dance.
   Do not infer a hard adult-age condition from that request.
-- The archived PostgreSQL scripts, tests and plan in `web/deploy/` and
-  `web/scripts/` still name the deleted project `biplan-staging-efeblk`.
-  Update or remove them with the PostgreSQL work.
 - Corroborate the Canbay / Canbay & Wolker and Ada Bar identity pairs in
   `web/work/comprehensive-review/golden-labels-agent-verified.json`.
   The frozen sources do not prove a merge.
@@ -347,7 +346,8 @@ checks still pass, and the per-request cost does not increase without approval.
 - 2026-10-30: New repository `Efeblk/event-recommender` from
   `Efeblk/event_recommender@469b188`, built as layered PRs: #1 domain core,
   #2 collector, #3 retrieval and Jev, #4 web app, #5 GCP deployment parts
-  removed (user decision). Not included: PostgreSQL code (outside v1),
+  removed (user decision), #6 PostgreSQL catalog backend removed. The snapshot
+  store is the only backend. Not included: PostgreSQL code (outside v1),
   `docs/archive/`, the graph experiment, parser benchmarks, dated reports and
   unused scripts. GCP staging still runs from the old repository.
 

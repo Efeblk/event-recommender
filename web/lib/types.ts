@@ -166,8 +166,6 @@ export interface SearchDiagnostics {
   planEvidence?: { supported: number; contradicted: number; unknown: number };
 }
 export interface SearchResult {
-  /** The immutable catalog generation used throughout this request, when supported. */
-  publicationId?: string;
   recommendations: Recommendation[];
   filters: Filters;
   mode: 'filters' | 'jev';
