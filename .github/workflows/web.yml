@@ -47,5 +47,20 @@ jobs:
           cache-dependency-path: web/package-lock.json
       - run: npm ci
       - run: npm test
+      - name: Check frozen conversational release constraints without API calls
+        run: node --experimental-strip-types scripts/check-release-cases.mjs
+      - name: Check structured input fixture and API contract without API calls
+        run: npm run test:input-intent
+      - name: Replay Jev scores and check every recommendation without API calls
+        run: node --experimental-strip-types scripts/evaluate-jev.ts
       - run: npm run typecheck
       - run: npm run lint
+      - run: npm run build:node
+      - name: Verify compiled Node server without API keys
+        run: npm run test:smoke:node
+      - name: Install Chromium for browser tests
+        run: npx playwright install --with-deps chromium
+      - name: Verify desktop and mobile browser flows without API calls
+        env:
+          BIPLAN_BROWSER_START: '1'
+        run: npx playwright test
