@@ -1,0 +1,18 @@
+# Copy to the ignored terraform.tfvars only after you choose the dedicated project.
+project_id                          = "replace-with-dedicated-project"
+dedicated_billing_project_confirmed = false
+region                              = "us-central1"
+
+# Trust is refs/heads/master by default. The workflow file must exist on
+# master before the first manual run.
+github_allowed_branch = "master"
+
+# Gemini through Vertex AI with the runtime identity (paid, needs approval).
+# Leave false to use a Gemini API key secret instead.
+vertex_ai_enabled = false
+
+# Alert only. No spending cap or billing association is created.
+# budget_billing_account = "XXXXXX-XXXXXX-XXXXXX"
+# budget_currency_code   = "USD" # Must match the billing account currency.
+# budget_amount          = 5
+# budget_notification_channels = ["projects/PROJECT/notificationChannels/NUMBER"]

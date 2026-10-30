@@ -158,8 +158,7 @@ cd web
 npm test
 npm run typecheck
 npm run lint
-npm run test:deploy-config
-npm run test:deploy:gcp
+npm run eval:agent
 npm run build:node
 npm run test:smoke:node
 ```
@@ -187,14 +186,29 @@ After the build, use `BIPLAN_BROWSER_START=1 npm run test:browser`.
 In PowerShell, set `$env:BIPLAN_BROWSER_START = '1'` first.
 The browser suite uses mocked API responses and has no cloud or AI credentials.
 Run `npm test` in `collector/` for collector changes.
-CI also checks the Linux Docker image.
+CI also builds the Linux Docker image and smokes it without credentials
+(`web/scripts/smoke-container.sh`). It checks the Terraform files with
+`terraform fmt`, `validate` and mocked `terraform test` plans.
 
 `npm run build`, `npm run start` and `npm run test:smoke`
 are aliases for the Node commands. They do not run Cloudflare.
 
 ## Staging
 
-Staging deploys from the old repository ([GCP deployment runbook](https://github.com/Efeblk/event_recommender/blob/469b188e36c51df9a01b8f65bf83e2e99510698a/docs/gcp-deployment.md)).
+This repository has the staging deployment files:
+
+- `infra/gcp/`: Terraform for the staging project (Firestore with a TTL on
+  agent sessions, private bucket, Artifact Registry, secret names, identities,
+  GitHub federation and an optional budget alert). See
+  [infra/gcp/README.md](infra/gcp/README.md).
+- `.github/workflows/gcp-staging.yml`: a manual deploy of one exact commit
+  to a private Cloud Run service, through the protected `gcp-staging`
+  environment.
+
+Nothing is applied yet. Until the user moves staging to these files, staging
+deploys from the old repository
+([GCP deployment runbook](https://github.com/Efeblk/event_recommender/blob/469b188e36c51df9a01b8f65bf83e2e99510698a/docs/gcp-deployment.md)).
+The collector workflow also stays there.
 Staging is private. The product plan permits staging deploys and gate approval.
 Public access and new paid resources need user approval.
 `/api/health` checks the application. `/api/ready` checks catalog readiness.

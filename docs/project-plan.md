@@ -182,6 +182,11 @@ production URL.
   and English "for kids" does not narrow results. Jev covers these in
   production. The agent age guard removes 18+ sessions for child requests.
 - Record a live Gemini run of the agent evaluation (needs a key and budget).
+- Staging move (user decision): apply `infra/gcp/` or import the existing
+  `biplan-stg-efeblk` resources, move the collector workflow and its
+  identity, set the `gcp-staging` environment, then make the first deploy.
+- Public access for the course demo (user approval), after sign-in, rate
+  limits and the budget alert are live in staging.
 - Restore the golden catalog artifact to `web/work/phase-one/` to run
   `npm run test:golden` again. The GitHub artifact expired on 2026-10-18.
 - Open items from the archived plan's Later list stay valid. Move each one
@@ -211,3 +216,10 @@ production URL.
   sessions for child requests; favorites accept catalog IDs with ":". The
   steps are scripted, so this is not a Gemini quality result. The golden
   catalog artifact is not available, so `test:golden` did not run.
+- 2026-10-30: PR #10 merged (Sprint 3). Sprint 4 deployment files: Terraform
+  in `infra/gcp/` (from the old repository, without PostgreSQL and the
+  collector; Gemini and Maps secret names, Firestore TTL on agent sessions,
+  optional Vertex AI, budget alert), manual private deploy workflow
+  `gcp-staging.yml`, CI jobs `container` and `terraform`. Local checks:
+  `terraform validate` and 7 mocked `terraform test` plans pass. Nothing is
+  applied or deployed. Staging still runs from `Efeblk/event_recommender`.

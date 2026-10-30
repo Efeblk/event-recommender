@@ -64,3 +64,28 @@ jobs:
         env:
           BIPLAN_BROWSER_START: '1'
         run: npx playwright test
+  container:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - name: Build the Linux image without credentials
+        run: docker build -f web/Dockerfile --tag biplan-ci:${{ github.sha }} .
+      - name: Smoke the image without credentials
+        run: bash web/scripts/smoke-container.sh biplan-ci:${{ github.sha }}
+  terraform:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: infra/gcp
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: hashicorp/setup-terraform@b9cd54a3c349d3f38e8881555d616ced269862dd # v3.1.2
+        with:
+          terraform_version: 1.16.4
+      - run: terraform fmt -check -recursive
+      - run: terraform init -backend=false -input=false
+      - run: terraform validate
+      - name: Check private staging plans without Google credentials
+        run: terraform test
