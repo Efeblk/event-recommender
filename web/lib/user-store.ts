@@ -1,4 +1,5 @@
 /** Saved plans and favorites. Each record belongs to one Firebase user ID. */
+import { createHash } from 'node:crypto';
 
 export const MAX_PLANS_PER_USER = 50;
 export const MAX_FAVORITES_PER_USER = 200;
@@ -54,6 +55,16 @@ export function validUserId(uid: string) {
 export function validRecordId(id: string) {
   return ID.test(id);
 }
+/** Catalog event IDs, for example "biletinial:123" or "session-<hash>". */
+export const EVENT_ID = /^[A-Za-z0-9_:.-]{1,200}$/;
+export function validEventId(id: string) {
+  return EVENT_ID.test(id);
+}
+/** Document key for a favorite. Event IDs can contain characters that are not safe in a path. */
+export function favoriteKey(eventId: string) {
+  if (!validEventId(eventId)) throw new Error('Invalid event.');
+  return createHash('sha256').update(eventId).digest('hex').slice(0, 40);
+}
 
 /** Documents keyed by path. The Firestore store and the memory store share it. */
 export interface DocumentCollection {
@@ -99,14 +110,14 @@ export function createUserStore(documents: DocumentCollection, namespace: string
       return ((await documents.list(favorites(uid))) as unknown as SavedFavorite[]).sort(byNewest);
     },
     async saveFavorite(uid, favorite) {
-      const path = recordPath(favorites(uid), favorite.eventId);
+      const path = recordPath(favorites(uid), favoriteKey(favorite.eventId));
       if (!(await documents.get(path)) && (await documents.count(favorites(uid))) >= MAX_FAVORITES_PER_USER)
         throw new UserStoreLimitError('Favorite limit reached.');
       await documents.set(path, favorite as unknown as Record<string, unknown>);
       return favorite;
     },
     async deleteFavorite(uid, eventId) {
-      return documents.delete(recordPath(favorites(uid), eventId));
+      return documents.delete(recordPath(favorites(uid), favoriteKey(eventId)));
     },
   };
 }

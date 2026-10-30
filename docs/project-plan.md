@@ -177,6 +177,13 @@ production URL.
 - v2 ranking and scoring from the archived plan.
 - More providers. Promotions and discounts.
 - PostgreSQL. Its code stays in `Efeblk/event_recommender@469b188`.
+- Offline search (rules, no Jev) gaps found by the agent evaluation probe:
+  "Anadolu yakası" does not filter by side, "bale" does not map to `Dans`,
+  and English "for kids" does not narrow results. Jev covers these in
+  production. The agent age guard removes 18+ sessions for child requests.
+- Record a live Gemini run of the agent evaluation (needs a key and budget).
+- Restore the golden catalog artifact to `web/work/phase-one/` to run
+  `npm run test:golden` again. The GitHub artifact expired on 2026-10-18.
 - Open items from the archived plan's Later list stay valid. Move each one
   here when a sprint needs it.
 
@@ -195,3 +202,12 @@ production URL.
   favorites with Firebase Auth and Firestore, Firestore ADK sessions, `/saved`
   page with `.ics` export, per-user limits. Tests use a scripted model and
   fake fetchers. No Gemini, Maps or Firebase keys yet, so no live run.
+- 2026-10-30: PR #9 merged (Sprint 2). Sprint 3 code: agent evaluation
+  `agent-v1` (34 conversations, 13 multi-turn, Turkish and English) with
+  replay in `npm test` and a budgeted live record mode. Scripted replay:
+  34/34 pass, 0 hard-constraint violations, 0 duplicate cards, 0 invented
+  events. Fixes from the evaluation: English negated districts ("not in
+  Kadıköy") no longer become a district filter; `search_events` removes 18+
+  sessions for child requests; favorites accept catalog IDs with ":". The
+  steps are scripted, so this is not a Gemini quality result. The golden
+  catalog artifact is not available, so `test:golden` did not run.
