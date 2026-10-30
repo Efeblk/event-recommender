@@ -1,0 +1,65 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { eventDateLabel } from '../lib/event-date.ts';
+import { isEligible } from '../lib/search.ts';
+import { emptyFilters, type EventRecord } from '../lib/types.ts';
+
+const now = new Date('2026-09-29T09:00:00.000Z');
+const event: EventRecord = { id: 'admission', title: 'Müze Girişi', description: '',
+  startsAt: '2026-09-30T14:00:00.000Z', checkedAt: now.toISOString(), venue: 'Müze',
+  city: 'İstanbul', district: '', address: '', price: 280, currency: 'TRY', url: '', imageUrl: '',
+  category: 'Müze', availability: 'available', attendanceTiming: { kind: 'admission_window',
+    evidence: 'provider_flexible_window', validFrom: '2026-09-01T07:00:00.000Z', validThrough: '2026-09-30T14:00:00.000Z' } };
+
+await test('validity end is neither displayed nor filtered as an appointment time', () => {
+  assert.equal(isEligible(event, emptyFilters, now), true);
+  assert.equal(isEligible(event, { ...emptyFilters, dateFrom: '2026-09-29', dateTo: '2026-09-29' }, now), true);
+  assert.equal(isEligible(event, { ...emptyFilters, dateFrom: '2026-08-29', dateTo: '2026-08-29' }, now), false);
+  assert.equal(isEligible(event, { ...emptyFilters, startTimeFrom: '17:00' }, now), false);
+  const label = eventDateLabel(event);
+  assert.match(label, /1 Eylül 2026.*30 Eylül 2026/);
+  assert.doesNotMatch(label, /17:00|10:00/);
+  assert.match(label, /Ziyaret saatlerini kontrol edin/);
+});
+await test('unknown admission time stays unknown while explicit and legacy sessions retain clock time', () => {
+  const unknown = { ...event, attendanceTiming: { kind: 'unknown' as const, evidence: 'insufficient_source_evidence' as const } };
+  assert.equal(isEligible(unknown, { ...emptyFilters, startTimeTo: '18:00' }, now), false);
+  assert.doesNotMatch(eventDateLabel(unknown), /17:00/);
+  for (const attendanceTiming of [undefined, { kind: 'timed_session' as const, evidence: 'provider_sessions_and_source_text' as const }]) {
+    const timed = { ...event, attendanceTiming };
+    assert.equal(isEligible(timed, { ...emptyFilters, startTimeFrom: '17:00' }, now), true);
+    assert.match(eventDateLabel(timed), /17:00/);
+  }
+});
+
+await test('a provider-labelled door clock is displayed as doors and never filtered as event start', () => {
+  const door = {
+    ...event,
+    category: 'Konser' as const,
+    description: 'Belirtilen saat, kapı açılış saatidir.',
+    startsAt: '2026-10-10T17:00:00.000Z',
+    attendanceTiming: undefined,
+  };
+  assert.equal(isEligible(door, { ...emptyFilters, startTimeFrom: '19:00' }, now), false);
+  const label = eventDateLabel(door);
+  assert.match(label, /20:00/);
+  assert.match(label, /Kapı açılışı/);
+  assert.match(label, /Etkinlik başlangıcını kontrol edin/);
+});
+
+await test('an unknown concert start uses event wording without displaying the unverified clock', () => {
+  const concert = {
+    ...event,
+    title: 'Yüksek Sadakat',
+    category: 'Konser' as const,
+    startsAt: '2026-11-07T19:00:00.000Z',
+    attendanceTiming: {
+      kind: 'unknown' as const,
+      evidence: 'insufficient_source_evidence' as const,
+    },
+  };
+  const label = eventDateLabel(concert);
+  assert.doesNotMatch(label, /22:00/);
+  assert.match(label, /Etkinlik saatini kontrol edin/);
+  assert.doesNotMatch(label, /Ziyaret saatini/);
+});
