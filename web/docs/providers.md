@@ -3,7 +3,7 @@
 > retrieval](voyage-retrieval.md). It does not use the chat and embedding
 > adapters below. Setting their keys does not enable recommendations. After
 > authorization, the retained `POST /api/admin/sync` compatibility route returns
-> HTTP 410. Use the [GCP deployment guide](../../docs/gcp-deployment.md) for the
+> HTTP 410. Use the [GCP deployment guide](https://github.com/Efeblk/event_recommender/blob/469b188e36c51df9a01b8f65bf83e2e99510698a/docs/gcp-deployment.md) for the
 > current runtime and operations.
 
 # AI sağlayıcı bağlantısı

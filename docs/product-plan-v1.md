@@ -336,7 +336,20 @@ checks still pass, and the per-request cost does not increase without approval.
   `web/work/comprehensive-review/golden-labels-agent-verified.json`.
   The frozen sources do not prove a merge.
 
+- Bring GCP deployment into `Efeblk/event-recommender` when the user asks:
+  `gcp-staging.yml`, `gcp-collector.yml`, `infra/gcp`, the deploy checks and
+  the two runbooks from `Efeblk/event_recommender@469b188`. Then move
+  Workload Identity, the GitHub environments, secrets and `GCP_STAGING_*`
+  variables, and stop the workflows in the old repository.
+
 ## Status log
+
+- 2026-10-30: New repository `Efeblk/event-recommender` from
+  `Efeblk/event_recommender@469b188`, built as layered PRs: #1 domain core,
+  #2 collector, #3 retrieval and Jev, #4 web app, #5 GCP deployment parts
+  removed (user decision). Not included: PostgreSQL code (outside v1),
+  `docs/archive/`, the graph experiment, parser benchmarks, dated reports and
+  unused scripts. GCP staging still runs from the old repository.
 
 - 2026-10-27: R4 code: collection-time event labels (`web/lib/event-labels.ts`,
   `/api/admin/labels`, `index_only` workflow step behind

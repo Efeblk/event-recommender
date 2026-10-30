@@ -55,7 +55,7 @@ The script reads the local sync token only for a loopback destination.
 Remote use targets the private Cloud Run service. It requires `BIPLAN_URL`,
 `SYNC_TOKEN`, `SERVERLESS_ID_TOKEN` and all bounded live-run arguments required
 by `scripts/index-embeddings.mjs`. The Voyage key stays on the server. Use the
-[GCP collector runbook](../../docs/gcp-collector.md) for staging indexing.
+[GCP collector runbook](https://github.com/Efeblk/event_recommender/blob/469b188e36c51df9a01b8f65bf83e2e99510698a/docs/gcp-collector.md) for staging indexing.
 GET `/api/admin/embeddings` reports eligible sessions and vector coverage.
 POST indexes at most 32 pending documents under a lease. Both require the sync token.
 The driver stops on failure without automatic retries. It has a bounded batch count.
