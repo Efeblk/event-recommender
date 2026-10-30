@@ -1,19 +1,17 @@
 import { recommendRequest, validateRequest } from '@/lib/recommend';
 import {
   aiDailyRateLimit,
-  candidates,
   catalogStatus,
   logRequest,
   requestRateLimit,
   runtime,
   type RateLimitResult,
 } from '@/lib/store';
-import { jevConfigFrom, rankWithJev } from '@/lib/jev';
-import { voyageConfigFrom, embedWithVoyage } from '@/lib/voyage';
-import { interpretSpanInput } from '@/lib/span-interpreter';
-import { inputInterpreterFrom, inputReaderFrom } from '@/lib/interpreter-config';
-import { interpretInput } from '@/lib/input-interpreter';
-import { voyageVectorsFor } from '@/lib/voyage-index';
+import {
+  paidSearchConfigured,
+  searchDependencies,
+  type SpanParse,
+} from '@/lib/search-deps';
 import { catalogAllowsRecommendations } from '@/lib/catalog-readiness';
 import { visitorRateLimitEnabled } from '@/lib/rate-limit';
 import { publicEventRecord } from '@/lib/catalog';
@@ -22,11 +20,7 @@ import {
   readBoundedRequestText,
   RequestBodyTooLargeError,
 } from '@/lib/request-body';
-import {
-  DeadlineExceededError,
-  fetchWithSignal,
-  withDeadline,
-} from '@/lib/deadline';
+import { DeadlineExceededError, withDeadline } from '@/lib/deadline';
 const MAX_REQUEST_BYTES = 24_000;
 const REQUEST_BODY_TIMEOUT_MS = 5_000;
 const REQUEST_BUDGET_MS = 35_000;
@@ -120,17 +114,19 @@ async function postWithinBudget(
   }
   try {
     requestSignal.throwIfAborted();
-    const config = jevConfigFrom(runtime());
-    const inputInterpreter = inputInterpreterFrom(runtime(), Boolean(config));
-    const inputReader = inputReaderFrom(runtime());
-    const embeddingConfig = voyageConfigFrom(runtime());
-    const providerFetch = fetchWithSignal(requestSignal);
-    const paid = Boolean(config || embeddingConfig);
+    let parsed: SpanParse | null = null;
+    const now = new Date();
+    const deps = searchDependencies({
+      now,
+      signal: requestSignal,
+      measured,
+      onParse: (parse) => (parsed = parse),
+    });
+    const paid = paidSearchConfigured();
     if (visitorRateLimitEnabled(runtime())) {
       const requestLimit = await requestRateLimit(request, paid);
       if (!requestLimit.allowed) return limited(requestLimit);
     }
-    const now = new Date();
     const catalog = await measured('catalog', () => catalogStatus(now));
     if (!catalogAllowsRecommendations(catalog.status))
       return Response.json(
@@ -156,34 +152,7 @@ async function postWithinBudget(
       );
       if (!dailyLimit.allowed) return limited(dailyLimit);
     }
-    let parsed: Awaited<ReturnType<typeof interpretSpanInput>> | null = null;
-    const result = await recommendRequest(input, {
-      now,
-      candidates: (filters) =>
-        measured('candidates', () => candidates(filters)),
-      config,
-      embeddingConfig,
-      vectors: (events, config) =>
-        measured('vectors', () => voyageVectorsFor(events, config)),
-      interpret: (input, options) =>
-        measured('interpret', () =>
-          interpretInput(input, { ...options, fetcher: providerFetch }),
-        ),
-      embed: (config, texts, kind) =>
-        measured('query_embedding', () =>
-          embedWithVoyage(config, texts, kind, providerFetch),
-        ),
-      rank: (config, input, events) =>
-        measured('rank', () =>
-          rankWithJev(config, input, events, providerFetch),
-        ),
-      spanInterpret: async (input, options) =>
-        (parsed = await measured('interpret', () =>
-          interpretSpanInput(input, { ...options, fetcher: providerFetch }),
-        )),
-      inputInterpreter,
-      inputReader,
-    });
+    const result = await recommendRequest(input, deps);
     // Approved staging tests keep requests for parser evaluation; a failed
     // write never fails the search.
     if (requestLogEnabled(runtime()))

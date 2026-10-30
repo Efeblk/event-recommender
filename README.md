@@ -6,8 +6,7 @@ venues and saves plans for the user.
 Use [the project plan](docs/project-plan.md) for scope, sprints and acceptance checks.
 Use [the architecture](docs/architecture.md) for the target system and the current data flow.
 
-The agent layer is not built yet. Sprint 1 adds it. The sections below
-describe the current search application, which becomes the agent's
+The agent lives in `web/agent/`. The search application below is its
 `search_events` tool.
 
 The application runs on Node in GCP Cloud Run.
@@ -62,6 +61,31 @@ npm run local:refresh -- --report /path/to/report.json
 Use `--collect` to collect fresh data first.
 Paid Voyage indexing needs an approved budget before use.
 Never put secrets in chat, Git, a build artifact or a public environment variable.
+
+## Plan assistant
+
+Open **/plan** for the chat. `POST /api/agent` takes `{ sessionId, message }`
+and streams newline-delimited JSON events: `tool`, `cards`, `text`, `error`
+and `done`. Cards come only from tool results. Model text cannot create cards.
+
+The root ADK `LlmAgent` (`web/agent/agent.ts`) uses Gemini and these tools:
+
+- `search_events`: the checked search pipeline below. The agent sends one
+  complete request each time, so the pipeline stays stateless.
+- `get_event_details`: current catalog records for event IDs.
+
+Configure Gemini with one of these:
+
+- `GEMINI_API_KEY` (or `GOOGLE_API_KEY`) for the Gemini API.
+- `GOOGLE_GENAI_USE_VERTEXAI=true`, `GOOGLE_CLOUD_PROJECT` and optional
+  `GOOGLE_CLOUD_LOCATION` (default `us-central1`) for Vertex AI with
+  Application Default Credentials.
+
+`BIPLAN_AGENT_MODEL` selects the model (default `gemini-2.5-flash`). Without
+Gemini settings, `/api/agent` returns 503 with code `agent_unavailable`.
+Each turn has a 60 s limit and at most 8 model calls. The route uses the same
+body limit, visitor rate limit, daily AI limit and catalog check as search.
+Sessions stay in process memory until the Firestore session store exists.
 
 ## Search
 

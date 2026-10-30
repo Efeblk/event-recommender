@@ -11,7 +11,7 @@ const destination = resolve(root, 'dist-node');
 if (relative(root, destination) !== 'dist-node')
   throw new Error('Refusing to write outside the web project.');
 
-const includedDirectories = new Set(['app', 'components', 'data', 'lib', 'public']);
+const includedDirectories = new Set(['agent', 'app', 'components', 'data', 'lib', 'public']);
 const includedFiles = new Set([
   'next.config.ts',
   'package-lock.json',
