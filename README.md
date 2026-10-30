@@ -164,6 +164,25 @@ npm run build:node
 npm run test:smoke:node
 ```
 
+`npm run eval:agent` replays the agent evaluation (`web/fixtures/agent-v1.json`,
+34 Turkish and English conversations). The tools run on a synthetic catalog
+(`web/evals/agent-catalog-v1.ts`) with fake route and weather services, so
+the replay has no network calls. It reports hard-constraint violations,
+duplicate cards, event titles that no tool returned, and the pass rate.
+`npm test` runs the same replay in CI.
+
+The current steps are scripted by hand (`recording.source: "scripted"`). They
+check the tools, guards and expectations, not Gemini. To record a live run,
+set the Gemini settings and give a call budget:
+
+```sh
+npm run eval:agent -- --record --max-model-calls 250 --out work/agent-eval/live.json
+npm run eval:agent -- --fixture work/agent-eval/live.json
+```
+
+Record mode never retries a failed call and stops before a case that could
+exceed the budget.
+
 After the build, use `BIPLAN_BROWSER_START=1 npm run test:browser`.
 In PowerShell, set `$env:BIPLAN_BROWSER_START = '1'` first.
 The browser suite uses mocked API responses and has no cloud or AI credentials.

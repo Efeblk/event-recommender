@@ -27,7 +27,8 @@
     "test:deploy:gcp": "node scripts/check-gcp-deploy-config.mjs",
     "test:input-intent": "node --experimental-strip-types scripts/check-input-intent.mjs",
     "test:golden": "node --experimental-strip-types scripts/golden-run.ts",
-    "eval:plan": "node --experimental-strip-types scripts/plan-eval.ts"
+    "eval:plan": "node --experimental-strip-types scripts/plan-eval.ts",
+    "eval:agent": "node --experimental-strip-types scripts/agent-eval.ts"
   },
   "dependencies": {
     "@base-ui/react": "1.7.0",

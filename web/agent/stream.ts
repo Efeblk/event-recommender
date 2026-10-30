@@ -19,6 +19,8 @@ export interface AgentToolDeps {
   route?: RouteLookup | null;
   weather?: WeatherLookup;
   userStore?: () => Promise<UserStore>;
+  /** Clock for date checks. The evaluation sets a fixed time. */
+  now?: () => Date;
 }
 
 /** All agent tools for one turn. `userId` is null for visitors who are not signed in. */
@@ -32,9 +34,9 @@ export function agentTools(
     createSearchEventsTool({ search: deps.search, showCards }),
     createEventDetailsTool({ lookup: deps.lookup, showCards }),
     ...planning.tools,
-    ...(deps.weather ? [createWeatherTool({ weather: deps.weather })] : []),
+    ...(deps.weather ? [createWeatherTool({ weather: deps.weather, now: deps.now })] : []),
     ...(deps.userStore
-      ? createSavedTools({ userId, store: deps.userStore, lookup: deps.lookup, legs: planning.cache })
+      ? createSavedTools({ userId, store: deps.userStore, lookup: deps.lookup, legs: planning.cache, now: deps.now })
       : []),
   ];
 }
@@ -52,7 +54,7 @@ export function agentTurnStream(options: {
 }): ReadableStream<Uint8Array> {
   const sink = new CardSink();
   const tools = agentTools(options.tools, sink.show, options.userId);
-  const runner = createRunner(createAgent({ model: options.model, tools }), options.sessionService);
+  const runner = createRunner(createAgent({ model: options.model, tools, now: options.tools.now }), options.sessionService);
   const encoder = new TextEncoder();
   const line = (event: AgentStreamEvent) => encoder.encode(`${JSON.stringify(event)}\n`);
   return new ReadableStream({

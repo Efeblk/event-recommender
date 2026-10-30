@@ -1,4 +1,5 @@
-import { forUser, json, queryId } from '@/lib/me-route.node';
+import { forUser, json } from '@/lib/me-route.node';
+import { validEventId } from '@/lib/user-store';
 import { candidates } from '@/lib/store';
 import { emptyFilters } from '@/lib/types';
 import { findEvents } from '@/agent/tools/event-details';
@@ -18,7 +19,7 @@ export function POST(request: Request) {
     } catch {
       return json({ error: 'Invalid request.', code: 'invalid_request' }, 400);
     }
-    if (typeof eventId !== 'string' || !/^[A-Za-z0-9_-]{1,128}$/.test(eventId))
+    if (typeof eventId !== 'string' || !validEventId(eventId))
       return json({ error: 'Invalid event.', code: 'invalid_request' }, 400);
     const [event] = findEvents(await candidates(emptyFilters), [eventId]);
     if (!event) return json({ error: 'Event not found.', code: 'not_found' }, 404);
@@ -29,8 +30,8 @@ export function POST(request: Request) {
 
 export function DELETE(request: Request) {
   return forUser(request, async (user, store) => {
-    const id = queryId(request);
-    if (!id) return json({ error: 'Invalid event.', code: 'invalid_request' }, 400);
+    const id = new URL(request.url).searchParams.get('id');
+    if (!id || !validEventId(id)) return json({ error: 'Invalid event.', code: 'invalid_request' }, 400);
     return (await store.deleteFavorite(user.uid, id))
       ? json({ deleted: id })
       : json({ error: 'Not found.', code: 'not_found' }, 404);

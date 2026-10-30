@@ -1,6 +1,8 @@
 import { FunctionTool } from '@google/adk';
 import { z } from 'zod';
 import type { EventRecord, SearchResult } from '../../lib/types.ts';
+import { checkAgeEvidence } from '../../lib/age-evidence.ts';
+import { normalize } from '../../lib/search.ts';
 import { eventCard, eventFacts, type AgentEventCard } from '../cards.ts';
 
 export const MAX_SEARCH_RESULTS = 10;
@@ -25,10 +27,22 @@ const parameters = z.object({
     ),
 });
 
-export function searchEventsResult(result: SearchResult) {
+/** The request is for children or minors (Turkish or English). */
+export function childAudienceRequested(request: string) {
+  return /\b(?:cocuk\w*|minik\w*|kids?|child(?:ren)?|toddlers?|minors?|teens?|teenagers?|ergen\w*|aile(?:ce|mle|yle)?|family|18 yas alti\w*|under 18)\b|\b\d{1,2}\s*(?:yas\w*|years? old|yo)\b/.test(
+    normalize(request),
+  );
+}
+
+/** Code guard: a request for children never returns sessions that the source limits to older people. */
+const CHILD_AGE = 10;
+
+export function searchEventsResult(result: SearchResult, request = '') {
+  const forChildren = childAudienceRequested(request);
   const events: EventRecord[] = result.recommendations
-    .slice(0, MAX_SEARCH_RESULTS)
-    .map((recommendation) => recommendation.event);
+    .map((recommendation) => recommendation.event)
+    .filter((event) => !forChildren || checkAgeEvidence(event, CHILD_AGE).status !== 'contradicted')
+    .slice(0, MAX_SEARCH_RESULTS);
   return {
     events,
     response: {
@@ -36,6 +50,7 @@ export function searchEventsResult(result: SearchResult) {
       notice: result.notice,
       clarification: result.clarification ?? [],
       totalCandidates: result.totalCandidates,
+      ...(forChildren ? { ageGuard: 'removed sessions with an age limit above children' } : {}),
       events: events.map(eventFacts),
     },
   };
@@ -51,7 +66,7 @@ export function createSearchEventsTool(deps: SearchEventsDeps) {
       '"needs_input" means one condition is unclear: ask the user about it.',
     parameters,
     execute: async ({ request }) => {
-      const { events, response } = searchEventsResult(await deps.search(request));
+      const { events, response } = searchEventsResult(await deps.search(request), request);
       deps.showCards(events.map(eventCard));
       return response;
     },

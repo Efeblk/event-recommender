@@ -390,9 +390,13 @@ function parsedDistrict(q: string): {
         index + match[0].length,
         index + match[0].length + 32,
       );
+      const before = q.slice(Math.max(0, index - 24), index);
       const negated =
         /^(?:['’]?[a-z]{0,8})?\s*(?:degil|olmasin|haric|disinda|istemiyorum|istemem)\b/.test(
           after,
+        ) ||
+        /\b(?:not\s+in|not\s+at|not|except(?:\s+for)?|excluding|outside(?:\s+of)?|avoid|anywhere\s+but|but\s+not)\s*$/.test(
+          before,
         );
       if (negated) hasNegative = true;
       return !negated;
