@@ -1,7 +1,37 @@
-# Bi' Plan v1 architecture
+# Bi' Plan architecture
 
-The [product plan](product-plan-v1.md) defines the scope and acceptance checks.
-This file describes the current snapshot system. PostgreSQL is outside v1.
+The [project plan](project-plan.md) defines the scope, sprints and acceptance
+checks. The [archived v1 product plan](archive/product-plan-v1.md) defined the
+search pipeline. PostgreSQL is outside the project.
+
+## Target system (built in Sprints 1–4)
+
+```text
+Browser (chat, cards, plan view, saved plans)
+  │  Firebase Auth ID token
+  ▼
+Cloud Run: Node service (web/)
+  ├─ /api/agent ── ADK Runner ── root LlmAgent (Gemini)
+  │                               ├─ search_events      → search pipeline (below)
+  │                               ├─ get_event_details  → catalog store
+  │                               ├─ plan_route         → Google Maps Routes API
+  │                               ├─ get_weather        → Open-Meteo
+  │                               └─ save_plan / list_plans / save_favorite → Firestore
+  └─ /api/health, /api/ready, /api/admin/*
+Cloud Run job: collector (scheduled) → catalog snapshot (Cloud Storage + Firestore)
+```
+
+- `web/agent/` holds the ADK agent, its instruction and the tool definitions.
+  Each tool has an input schema and returns typed data.
+- The ADK session service stores conversation state in Firestore. Users,
+  plans and favorites are Firestore collections keyed by the Firebase user ID.
+- `/api/agent` streams agent events. The UI renders text from the model and
+  renders event cards only from tool results.
+- Guardrails: message length and rate limits before the agent runs, schema
+  checks on every tool call, user ID checks on write tools, provider text
+  treated as data, and secrets only from Secret Manager.
+- The sections below describe the current search pipeline. It becomes the
+  `search_events` tool without changes to its correctness rules.
 
 ## Data flow
 
