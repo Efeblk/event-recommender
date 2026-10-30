@@ -38,9 +38,6 @@ Use [the v1 architecture](docs/architecture.md) for the current system.
 - Use Node from `web/.nvmrc`. Both packages require Node >=22.13.
 - For web changes, run `npm test`, `npm run typecheck` and `npm run lint` in `web/`.
 - For collector changes, run `npm test` in `collector/`.
-- For deployment changes, run `npm run test:deploy-config` in `web/`.
-- For GCP changes, also run `npm run test:deploy:gcp`, `npm run build:node`
-  and `npm run test:smoke:node` in `web/`. Verify the Linux Docker image in CI.
 - Build Node before browser checks. Use `npm run build:node` in `web/`.
 - Use `BIPLAN_BROWSER_START=1 npm run test:browser` when a browser check applies.
 - Prefer the T3 Code browser. Report an unavailable host before using Playwright.
@@ -54,11 +51,10 @@ Use [the v1 architecture](docs/architecture.md) for the current system.
 - Ask once per phase for a paid TypeSafe/Jev or Voyage budget. Give a cost estimate.
 - Keep paid calls within that budget. Do not retry paid calls automatically.
 - Prefer free development and staging options. New paid resources need user approval.
-- Staging deploys and approval of the `gcp-staging` gate are permitted by the plan.
 - Keep staging private. Public access needs user approval.
 - Keep staging and production resources separate.
 - Never print or commit secrets. Use ignored local settings or protected secrets.
-- Follow [GCP deployment](docs/gcp-deployment.md) and [GCP collection](docs/gcp-collector.md).
-- GCP staging still runs from `Efeblk/event_recommender`. Keep the GCP workflows
-  here disabled until the user approves the staging move.
+- GCP deployment (workflows, Terraform, runbooks) is not in this repository.
+  Staging still runs from `Efeblk/event_recommender`. Add GCP here only when
+  the user asks.
 - Find old PRs, runs and archived evidence in `Efeblk/event_recommender`.

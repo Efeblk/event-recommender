@@ -52,59 +52,6 @@ void test("the Cloud Run identity header remains optional", async (t) => {
   assert.equal(received["oai-sites-authorization"], undefined);
 });
 
-void test("the GCP collector schedule is opt-in and uses a dedicated identity", async () => {
-  const workflow = await readFile(
-    resolve(import.meta.dirname, "../../.github/workflows/gcp-collector.yml"),
-    "utf8",
-  );
-  assert.match(
-    workflow,
-    /^\s*workflow_dispatch:\s*\n\s*inputs:\s*\n\s*verify_only:[\s\S]*?type: boolean\s*\n\s*default: false$/m,
-  );
-  assert.match(workflow, /^\s*schedule:\s*$/m);
-  assert.match(workflow, /cron: '17 \*\/12 \* \* \*'/);
-  assert.match(
-    workflow,
-    /needs\.dispatch_mode\.outputs\.mode == 'collect' \|\| \(github\.event\.schedule == '17 \*\/12 \* \* \*' && vars\.GCP_STAGING_COLLECTION_ENABLED == 'true'\)/,
-  );
-  // Verification-only dispatch skips the collection gate and selects the monitor.
-  assert.match(
-    workflow,
-    /if: github\.event\.schedule == '47 \*\/3 \* \* \*' \|\| needs\.dispatch_mode\.outputs\.mode == 'verify'/,
-  );
-  // Indexing runs every 3 hours or on index_now. Verification-only dispatch does not select it.
-  assert.match(workflow, /cron: '47 \*\/3 \* \* \*'/);
-  assert.match(workflow, /if: \(github\.event\.schedule == '47 \*\/3 \* \* \*' \|\| needs\.dispatch_mode\.outputs\.mode == 'index'\) && vars\.GCP_STAGING_INDEXING_ENABLED == 'true'/);
-  assert.match(workflow, /GCP_STAGING_COLLECTION_UNTIL/);
-  assert.match(workflow, /needs\.schedule_gate\.outputs\.run == 'true'/);
-  assert.match(workflow, /environment: gcp-staging-collector/);
-  assert.match(workflow, /cancel-in-progress: false/);
-  assert.match(workflow, /--max-details 2000 --max-http 6000 --max-minutes 40 --discovery-pages 20/);
-  assert.match(
-    workflow,
-    /actions\/cache\/restore@0057852bfaa89a56745cba8c7296529d2fc39830 # v4\.3\.0/,
-  );
-  assert.match(workflow, /collector\/state\/coverage\.json/);
-  assert.match(workflow, /GCP_COLLECTOR_SERVICE_ACCOUNT/);
-  assert.match(workflow, /GCP_COLLECTOR_WORKLOAD_IDENTITY_PROVIDER/);
-  assert.match(workflow, /token_format: id_token/);
-  assert.match(workflow, /id_token_audience: \$\{\{ vars\.BIPLAN_URL \}\}/);
-  assert.match(workflow, /SERVERLESS_ID_TOKEN: \$\{\{ steps\.auth_restore\.outputs\.id_token \}\}/);
-  assert.match(workflow, /SERVERLESS_ID_TOKEN: \$\{\{ steps\.auth_publish\.outputs\.id_token \}\}/);
-  assert.doesNotMatch(workflow, /INDEX_EMBEDDINGS|index-embeddings/);
-  const replay = workflow.slice(workflow.indexOf("  replay_publication:"), workflow.indexOf("  diagnostics:"));
-  assert.match(replay, /if: needs\.dispatch_mode\.outputs\.mode == 'replay' \|\| needs\.dispatch_mode\.outputs\.mode == 'checkpoint'/);
-  assert.match(replay, /actions: read/);
-  assert.match(replay, /--validate-imports --exact-checkpoint/);
-  assert.match(replay, /--checkpoint-only --exact-checkpoint/);
-  assert.match(replay, /actions\/jobs\/\$FAILED_JOB_ID\/logs/);
-  assert.doesNotMatch(replay, /npm run collect|checkpoint:restore|index-collected-embeddings|TYPESAFE|VOYAGE/);
-  const diagnostics = workflow.slice(workflow.indexOf("  diagnostics:"), workflow.indexOf("  index_only:"));
-  assert.match(diagnostics, /mode == 'diagnostics'/);
-  assert.match(diagnostics, /diagnose-staging\.mjs/);
-  assert.doesNotMatch(diagnostics, /npm run collect|checkpoint:restore|index-collected-embeddings|TYPESAFE|VOYAGE/);
-});
-
 void test("the scheduled GCP collector deadline fails closed", () => {
   const now = Date.parse("2026-09-27T10:00:00.000Z");
   const gate = (values = {}) =>

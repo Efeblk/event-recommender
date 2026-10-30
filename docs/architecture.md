@@ -11,7 +11,7 @@ The shared identity code lives in `collector/identity/`. The GCP store uses it
 when publication prepares the search catalog. The collector's local checkpoint
 holds source records before that preparation.
 
-1. `.github/workflows/gcp-collector.yml` restores the private catalog checkpoint
+1. `.github/workflows/gcp-collector.yml` (old repository) restores the private catalog checkpoint
    and the coverage backlog. It runs `collector/run.mjs` for Biletinial, Bubilet
    and Biletix. Each run has page, HTTP request and time limits. Later runs
    continue unfinished work.
@@ -89,7 +89,7 @@ These entries are the evaluation and training data for the request parser.
 
 Search consumes the prepared catalog. It does not collect provider pages or
 enrich the full catalog. Labeling runs in the collector workflow
-([GCP collection](gcp-collector.md#event-labeling-phase-1r-r4)).
+([GCP collection](https://github.com/Efeblk/event_recommender/blob/469b188e36c51df9a01b8f65bf83e2e99510698a/docs/gcp-collector.md#event-labeling-phase-1r-r4)).
 The catalog remains searchable when the vector index is incomplete.
 Semantic coverage requires cached vectors for each current document.
 Optional Voyage indexing needs a separate approved budget and bounded window.
@@ -169,7 +169,7 @@ Artifact Registry stores container images.
 `/api/health` checks the application. `/api/ready` checks catalog and checkpoint
 readiness. A successful health check does not prove catalog readiness.
 
-Use [GCP deployment](gcp-deployment.md) and [GCP collection](gcp-collector.md).
+GCP deployment runs from the old repository: [GCP deployment](https://github.com/Efeblk/event_recommender/blob/469b188e36c51df9a01b8f65bf83e2e99510698a/docs/gcp-deployment.md) and [GCP collection](https://github.com/Efeblk/event_recommender/blob/469b188e36c51df9a01b8f65bf83e2e99510698a/docs/gcp-collector.md).
 The [archive](https://github.com/Efeblk/event_recommender/tree/469b188e36c51df9a01b8f65bf83e2e99510698a/docs/archive) preserves earlier plans and evidence. Archived documents
 do not define current scope. Cloudflare runtime files and workflows are removed.
 PostgreSQL code stays in its current folders. Its preparation step and dedicated

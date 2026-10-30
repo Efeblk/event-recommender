@@ -3,7 +3,7 @@
 The collector fetches public Istanbul listings from Biletinial, Bubilet and Biletix.
 It runs separately from the Node HTTP service. It does not call TypeSafe.
 Use [the product plan](../docs/product-plan-v1.md) for scope.
-Use [the GCP collector runbook](../docs/gcp-collector.md) for scheduled operations.
+Scheduled operations run in the old repository ([GCP collector runbook](https://github.com/Efeblk/event_recommender/blob/469b188e36c51df9a01b8f65bf83e2e99510698a/docs/gcp-collector.md)).
 
 ## Run locally
 

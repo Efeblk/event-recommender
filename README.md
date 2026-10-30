@@ -16,8 +16,8 @@ This repository continues
 [Efeblk/event_recommender](https://github.com/Efeblk/event_recommender)
 from commit `469b188`. It holds only the code that v1 uses.
 The old repository keeps the full history, the old PRs and the archived evidence.
+GCP deployment is not in this repository yet: no workflows, Terraform or runbooks.
 GCP staging still deploys and collects from the old repository.
-The GCP workflows in this repository stay disabled until staging moves here.
 
 ## Install
 
@@ -87,9 +87,10 @@ It distinguishes verified, retired, failed, quarantined and unvisited pages.
 Failed pages keep their original check times.
 Collection does not call TypeSafe. Optional Voyage indexing has a separate budget.
 
-Use [the collector guide](collector/README.md) and
-[the GCP collector runbook](docs/gcp-collector.md).
-The GCP workflow imports verified records, publishes a complete checkpoint
+Use [the collector guide](collector/README.md).
+Scheduled collection runs in the old repository
+([GCP collector runbook](https://github.com/Efeblk/event_recommender/blob/469b188e36c51df9a01b8f65bf83e2e99510698a/docs/gcp-collector.md)).
+That workflow imports verified records, publishes a complete checkpoint
 and reads it back. Raw provider pages are excluded from workflow artifacts.
 Small JSON reports remain available.
 
@@ -117,7 +118,7 @@ are aliases for the Node commands. They do not run Cloudflare.
 
 ## Staging
 
-Use [the GCP deployment runbook](docs/gcp-deployment.md).
+Staging deploys from the old repository ([GCP deployment runbook](https://github.com/Efeblk/event_recommender/blob/469b188e36c51df9a01b8f65bf83e2e99510698a/docs/gcp-deployment.md)).
 Staging is private. The product plan permits staging deploys and gate approval.
 Public access and new paid resources need user approval.
 `/api/health` checks the application. `/api/ready` checks catalog readiness.
