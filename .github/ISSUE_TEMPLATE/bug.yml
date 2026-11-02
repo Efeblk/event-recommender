@@ -1,0 +1,23 @@
+name: Bug
+description: Something does not work as the project plan says.
+labels: [bug]
+body:
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps
+      description: The request text (Turkish or English), the page and what you did.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected and actual result
+      description: Include wrong dates, places, prices, categories or duplicate cards.
+    validations:
+      required: true
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Evidence
+      description: Logs, run IDs or screenshots. Remove secrets and personal data first.

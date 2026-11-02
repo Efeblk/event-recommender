@@ -3,6 +3,10 @@
 Bi' Plan is a Google ADK agent that plans Istanbul outings from Turkish and
 English requests. It finds correct, bookable events, plans the route between
 venues and saves plans for the user.
+It is the group project for the course JOB191 - Dream Data Labs Solutions AI
+Augmented Software Engineering (1).
+New teammates start with [the onboarding guide](docs/onboarding.md) and
+[CONTRIBUTING.md](CONTRIBUTING.md).
 Use [the project plan](docs/project-plan.md) for scope, sprints and acceptance checks.
 Use [the architecture](docs/architecture.md) for the target system and the current data flow.
 
@@ -21,8 +25,8 @@ This repository continues
 [Efeblk/event_recommender](https://github.com/Efeblk/event_recommender)
 from commit `469b188`. It holds only the code that v1 uses.
 The old repository keeps the full history, the old PRs and the archived evidence.
-GCP deployment is not in this repository yet: no workflows, Terraform or runbooks.
-GCP staging still deploys and collects from the old repository.
+The staging Terraform and deploy workflow are in this repository (see Staging below),
+but GCP staging still deploys and collects from the old repository.
 
 ## Install
 

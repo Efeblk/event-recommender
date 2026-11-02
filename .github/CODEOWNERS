@@ -1,0 +1,7 @@
+# GitHub asks these owners to review matching pull requests.
+# Add each teammate's GitHub login next to the area of their role
+# (see "Team and roles" in docs/project-plan.md).
+*                   @Efeblk
+/.github/           @Efeblk
+/infra/             @Efeblk
+/AGENTS.md          @Efeblk

@@ -1,0 +1,25 @@
+name: Task
+description: A sprint item or a Later-list item to build.
+labels: [task]
+body:
+  - type: input
+    id: sprint
+    attributes:
+      label: Sprint and item
+      description: For example "Sprint 4, item 2" or "Later list".
+    validations:
+      required: true
+  - type: textarea
+    id: goal
+    attributes:
+      label: Goal
+      description: What must work when this task is done?
+    validations:
+      required: true
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Acceptance checks
+      description: The checks that prove the task is done.
+    validations:
+      required: true

@@ -9,8 +9,10 @@ search history, decisions and status log before 2026-10-30.
 ## Product scope
 
 - Bi' Plan is a Google ADK agent that plans Istanbul outings.
-- The course "Group Project Guidelines" set the scope: an ADK agent with at
-  least two tools, a UI, stored data, guardrails and a GCP deployment.
+- The course is JOB191 - Dream Data Labs Solutions AI Augmented Software
+  Engineering (1). Its "Group Project Guidelines" set the scope: an ADK
+  agent with at least two tools, a UI, stored data, guardrails and a GCP
+  deployment.
 - Build features F1–F4 from the project plan. F5 is a stretch goal.
 - Support Turkish and English requests.
 - Keep dates, places, budgets, categories, negations and age limits correct.
@@ -20,6 +22,14 @@ search history, decisions and status log before 2026-10-30.
   shortlist of up to 16.
 - Keep collection work outside agent requests.
 - Leave PostgreSQL, new providers and promotions outside the project.
+
+## Explain the project to teammates
+
+- When a teammate asks about the project, read [the onboarding guide](docs/onboarding.md) first.
+- Answer from the documents and the code. Give file paths.
+- If a document and the code disagree, say so. The project plan wins.
+- Explain the rules in the onboarding guide section 3 before a teammate's first change.
+- Point teammates to [CONTRIBUTING.md](CONTRIBUTING.md) for branches, PRs and checks.
 
 ## Work rules
 

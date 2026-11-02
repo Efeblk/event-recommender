@@ -1,7 +1,9 @@
 # Bi' Plan project plan: agentic outing planner
 
-Owner: the team. Written 2026-10-30. This plan follows the course
-"Group Project Guidelines". It has priority over
+Owner: the team. Written 2026-10-30. This plan follows the "Group Project
+Guidelines" of the course JOB191 - Dream Data Labs Solutions AI Augmented
+Software Engineering (1). New teammates start with the
+[onboarding guide](onboarding.md). This plan has priority over
 [the archived v1 product plan](archive/product-plan-v1.md) and all older plans.
 If `AGENTS.md` conflicts with this plan, follow this plan and record the
 conflict in the status log.
@@ -223,3 +225,9 @@ production URL.
   `gcp-staging.yml`, CI jobs `container` and `terraform`. Local checks:
   `terraform validate` and 7 mocked `terraform test` plans pass. Nothing is
   applied or deployed. Staging still runs from `Efeblk/event_recommender`.
+- 2026-11-02: Team setup for new teammates. Added `docs/onboarding.md`,
+  `CONTRIBUTING.md`, PR and issue templates, `CODEOWNERS` and Dependabot.
+  CI: GitHub Actions updated to current major versions, new `docs` link check
+  and `dependency-review` jobs. GitHub: a ruleset on `master` blocks direct
+  pushes, force pushes and deletion, and requires a PR with one approval and
+  green CI. Only squash merges.

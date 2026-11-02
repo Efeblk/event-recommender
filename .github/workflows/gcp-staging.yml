@@ -35,7 +35,7 @@ jobs:
     env:
       EXPECTED_SHA: ${{ inputs.expected_sha }}
     steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: ${{ inputs.expected_sha }}
           persist-credentials: false
@@ -52,7 +52,7 @@ jobs:
           set -euo pipefail
           gh api --paginate "repos/$GITHUB_REPOSITORY/commits/$EXPECTED_SHA/check-runs?per_page=100" --jq '.check_runs[]' | jq -s '{check_runs: .}' > exact-sha-checks.json
           node -e "const fs=require('node:fs');const runs=JSON.parse(fs.readFileSync('exact-sha-checks.json')).check_runs??[];for(const name of ['verify (ubuntu-latest)','collector (ubuntu-latest)','terraform','container']){const latest=runs.filter(x=>x.name===name&&x.app?.slug==='github-actions').sort((a,b)=>(Date.parse(b.started_at)||0)-(Date.parse(a.started_at)||0))[0];if(latest?.status!=='completed'||latest?.conclusion!=='success')throw new Error('Missing successful exact-SHA check: '+name)}"
-      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version-file: web/.nvmrc
           cache: npm
@@ -96,7 +96,7 @@ jobs:
           SOURCE_TREE="$SOURCE_TREE" WEB_LOCK="$WEB_LOCK" IMAGE_ID="$IMAGE_ID" node -e "const fs=require('node:fs');const p={schemaVersion:1,revision:process.env.EXPECTED_SHA,sourceTree:process.env.SOURCE_TREE,imageId:process.env.IMAGE_ID,platform:'linux/amd64',node:process.version,lockfiles:{web:process.env.WEB_LOCK},workflowRunId:process.env.GITHUB_RUN_ID,workflowRunAttempt:process.env.GITHUB_RUN_ATTEMPT};fs.writeFileSync('gcp-candidate/provenance.json',JSON.stringify(p,null,2)+'\n')"
           (cd gcp-candidate && sha256sum image.tar.gz > image.sha256 && sha256sum image.sha256 provenance.json > manifest.sha256)
       - name: Upload immutable candidate
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: gcp-staging-image-${{ inputs.expected_sha }}
           path: web/gcp-candidate
@@ -145,7 +145,7 @@ jobs:
       FIREBASE_AUTH_DOMAIN: ${{ vars.FIREBASE_AUTH_DOMAIN }}
     steps:
       - name: Checkout reviewed revision
-        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: ${{ inputs.expected_sha }}
           persist-credentials: false
@@ -198,7 +198,7 @@ jobs:
           fi
           { echo "env_vars=$(IFS=,; echo "${ENV_VARS[*]}")"; echo "secrets=$(IFS=,; echo "${SECRETS[*]}")"; } >> "$GITHUB_OUTPUT"
       - name: Download reviewed candidate
-        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           name: gcp-staging-image-${{ inputs.expected_sha }}
           path: candidate
@@ -300,7 +300,7 @@ jobs:
           mkdir -p deploy-provenance
           cp health.json ready.json deploy-provenance/
           node -e "require('node:fs').writeFileSync('deploy-provenance/gcp-staging.json',JSON.stringify({schemaVersion:1,environment:'staging',revision:process.env.EXPECTED_SHA,image:process.env.IMAGE_REF,cloudRunRevision:process.env.CLOUD_RUN_REVISION,service:process.env.GCP_CLOUD_RUN_SERVICE,region:process.env.GCP_REGION,inputInterpreter:process.env.INPUT_INTERPRETER,runId:process.env.GITHUB_RUN_ID},null,2)+'\n')"
-      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: gcp-staging-deployment-${{ inputs.expected_sha }}
           path: deploy-provenance
