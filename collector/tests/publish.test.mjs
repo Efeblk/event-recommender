@@ -46,7 +46,7 @@ function invoke(origin, extra = []) {
     [publishPath, "--report", "/definitely/missing-report.json", ...extra],
     {
       encoding: "utf8",
-      env: { ...process.env, BIPLAN_URL: origin, SYNC_TOKEN: "test-only" },
+      env: { ...process.env, EVENT_REC_URL: origin, SYNC_TOKEN: "test-only" },
     },
   );
 }

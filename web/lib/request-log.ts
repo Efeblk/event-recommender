@@ -10,11 +10,11 @@ export const REQUEST_LOG_VERSION = 'request-log.v1';
 
 export interface RequestLogEnv {
   DEPLOYMENT_ENV?: string;
-  BIPLAN_PREVIEW_TESTING?: string;
+  EVENT_REC_PREVIEW_TESTING?: string;
 }
 
 export function requestLogEnabled(env: RequestLogEnv) {
-  return env.DEPLOYMENT_ENV === 'staging' && env.BIPLAN_PREVIEW_TESTING === 'true';
+  return env.DEPLOYMENT_ENV === 'staging' && env.EVENT_REC_PREVIEW_TESTING === 'true';
 }
 
 export interface RequestLogEntry {
@@ -65,5 +65,5 @@ export function requestLogEntry(options: {
 export function requestLogKey(namespace: string, entry: RequestLogEntry) {
   if (!/^[A-Za-z0-9_-]{1,64}$/u.test(namespace) || !/^[a-f0-9-]{36}$/u.test(entry.id))
     throw new Error('Invalid request log key');
-  return `biplan/${namespace}/requestLog/${entry.at.slice(0, 10)}/${entry.at.replace(/[:.]/gu, '-')}-${entry.id}.json`;
+  return `event-rec/${namespace}/requestLog/${entry.at.slice(0, 10)}/${entry.at.replace(/[:.]/gu, '-')}-${entry.id}.json`;
 }

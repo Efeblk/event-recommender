@@ -7,7 +7,7 @@ import { atomicJson } from '../pipeline.mjs';
 import { serializedCheckpointWriter } from '../coverage.mjs';
 
 test('simultaneous collector completions preserve all progress without temporary-file collisions', async t => {
-  const directory = await mkdtemp(join(tmpdir(), 'biplan-coverage-concurrency-'));
+  const directory = await mkdtemp(join(tmpdir(), 'event-rec-coverage-concurrency-'));
   t.after(() => rm(directory, { recursive: true, force: true }));
   const path = join(directory, 'coverage.json');
   const state = { entries: [] };

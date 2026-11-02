@@ -86,7 +86,7 @@ export async function POST(request: Request) {
         { error: 'Embedding index already running' },
         { status: 409 },
       );
-    if (request.headers.get('x-biplan-audited-index') === '1') {
+    if (request.headers.get('x-event-rec-audited-index') === '1') {
       const reader = request.body?.getReader(),
         chunks: Uint8Array[] = [];
       let size = 0;
@@ -121,7 +121,7 @@ export async function POST(request: Request) {
   } catch (error) {
     const message = error instanceof Error ? error.message : '';
     const reason =
-      request.headers.get('x-biplan-audited-index') === '1'
+      request.headers.get('x-event-rec-audited-index') === '1'
         ? 'Audited indexing stopped; inspect private run evidence before another attempt'
         : /^Voyage request failed(?: \(HTTP \d{3}\))?\.$/.test(message)
           ? message

@@ -117,7 +117,7 @@ async function labelOne(
 
 export async function labelStatus(store: HighLevelStore, control: ControlStore, namespace: string, at: Date) {
   const pending = await pendingDocuments(store, at);
-  const ledger = await control.get<Ledger>(`biplan/${namespace}/eventLabels/ledger`);
+  const ledger = await control.get<Ledger>(`event-rec/${namespace}/eventLabels/ledger`);
   return { ...pending.counts, ledger };
 }
 
@@ -147,7 +147,7 @@ export async function labelEventBatch(
   const now = deps.now ?? Date.now,
     fetcher = deps.fetcher ?? fetch,
     started = now();
-  const ledgerPath = `biplan/${deps.namespace}/eventLabels/ledger`;
+  const ledgerPath = `event-rec/${deps.namespace}/eventLabels/ledger`;
   const { pending, counts } = await pendingDocuments(deps.store, new Date(now()));
   const result = { ...counts, labeled: counts.labeled, calls: 0, saved: 0, invalid: 0, failed: 0, usage: { inputTokens: 0, outputTokens: 0 } };
   if (!pending.length) return { ...result, outcome: 'complete' as const };

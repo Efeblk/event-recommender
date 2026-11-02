@@ -39,11 +39,11 @@ root:
 node --experimental-strip-types web/scripts/evaluate-jev.ts
 
 # Save the offline report (CI runs this same zero-call check).
-node --experimental-strip-types web/scripts/evaluate-jev.ts --out /tmp/biplan-jev-replay.json
+node --experimental-strip-types web/scripts/evaluate-jev.ts --out /tmp/event-rec-jev-replay.json
 
 # Explicit live evaluation; at most 12 requests. This uses provider credit.
 # Put TYPESAFE_API_KEY in ignored web/.dev.vars or the process environment first.
-node --experimental-strip-types web/scripts/evaluate-jev.ts --live --out /tmp/biplan-jev-evaluation.json
+node --experimental-strip-types web/scripts/evaluate-jev.ts --live --out /tmp/event-rec-jev-evaluation.json
 ```
 
 Optional `TYPESAFE_MODEL` selects another model for live evaluation. No key, provider error body, or private chat log is written to the report. Live evaluation sends only the checked-in fictional test cases, never the user's conversations. A failed call stops the run rather than retrying or proceeding blindly; the loop remains serial and is bounded to the 12 fixtures.
@@ -71,9 +71,7 @@ guarantees.
 ## Historical measured fictional-fixture run
 
 An authorized live run on 2026-09-22 completed all 12 serial calls with
-`jev-1.13.0`. The checked-in [sanitized
-report](https://github.com/Efeblk/event_recommender/blob/469b188e36c51df9a01b8f65bf83e2e99510698a/web/evals/reports/2026-09-22-jev-1.13.0.json) records the source
-fingerprints for the evaluated code and fixtures. The findings below preserve
+`jev-1.13.0`. The findings below preserve
 the original score-based policy. They do not describe current admission.
 
 - The expected event ranked first among accepted results in all 10 labeled cases (10/10). Both unsupported-preference cases returned no accepted result (2/2; zero false positives).

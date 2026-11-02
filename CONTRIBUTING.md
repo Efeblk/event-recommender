@@ -52,12 +52,12 @@ Use Node from `web/.nvmrc`.
 |---|---|
 | `web/` | `npm test`, `npm run typecheck` and `npm run lint` in `web/` |
 | `web/agent/` | Also `npm run eval:agent` in `web/` |
-| UI | `npm run build:node`, then `BIPLAN_BROWSER_START=1 npm run test:browser` in `web/` |
+| UI | `npm run build:node`, then `EVENT_REC_BROWSER_START=1 npm run test:browser` in `web/` |
 | `collector/` | `npm test` in `collector/` |
 | `infra/gcp/` | `terraform fmt -check -recursive`, `terraform validate` and `terraform test` in `infra/gcp/` |
 | Documentation | `node .github/scripts/check-doc-links.mjs` and read your diff |
 
-In PowerShell, set `$env:BIPLAN_BROWSER_START = '1'` before the browser tests.
+In PowerShell, set `$env:EVENT_REC_BROWSER_START = '1'` before the browser tests.
 
 ## What CI does
 

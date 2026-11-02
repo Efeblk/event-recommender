@@ -11,7 +11,7 @@ const istanbulNow = (now: Date) =>
 
 /** The root agent instruction. `now` is the request time. */
 export function agentInstruction(now: Date) {
-  return `You are Bi' Plan, an assistant that plans outings in Istanbul.
+  return `You are Event Recommender, an assistant that plans outings in Istanbul.
 Current time in Istanbul: ${istanbulNow(now)}.
 
 Answer in the language of the user's last message (Turkish or English). Be short.

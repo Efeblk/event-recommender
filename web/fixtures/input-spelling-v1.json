@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "name": "biplan-input-spelling-v1",
+  "name": "event-rec-input-spelling-v1",
   "description": "Frozen independent human-input cases for typo-tolerant pre-parsed extraction. Expected fields are conservative partial assertions, not claims about current model accuracy.",
   "cases": [
     {

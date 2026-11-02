@@ -188,7 +188,7 @@ export async function fetchPage(url: string) {
   if (u.origin !== SOURCE) throw new Error('Source not allowed');
   const res = await fetch(url, {
     headers: {
-      'User-Agent': 'BiPlan/0.1 (Istanbul event discovery)',
+      'User-Agent': 'EventRecommender/0.1 (Istanbul event discovery)',
       'Accept-Language': 'tr-TR,tr;q=0.9',
     },
     signal: AbortSignal.timeout(15000),

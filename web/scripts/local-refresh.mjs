@@ -93,7 +93,7 @@ await run(
     canonicalSnapshot,
     '--allow-loopback-http',
   ],
-  { ...process.env, BIPLAN_URL: origin.origin, SYNC_TOKEN: token },
+  { ...process.env, EVENT_REC_URL: origin.origin, SYNC_TOKEN: token },
 );
 if (values.index) {
   console.log('Indexing pending Voyage documents…');
@@ -107,7 +107,7 @@ if (values.index) {
       String(indexIntervalMs),
       '--allow-loopback-http',
     ],
-    { ...process.env, BIPLAN_URL: origin.origin, SYNC_TOKEN: token },
+    { ...process.env, EVENT_REC_URL: origin.origin, SYNC_TOKEN: token },
   );
 }
 console.log(

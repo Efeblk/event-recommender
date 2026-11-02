@@ -7,7 +7,7 @@ import type { EventRecord } from './types.ts';
 /**
  * Soft preferences nudge an already eligible relevance ranking; they never
  * admit or remove an event. Phase 1 scores location and budget preferences
- * only (soft-ranking-plan.md in the Efeblk/event_recommender archive). Unknown evidence is neutral.
+ * only. Unknown evidence is neutral.
  */
 export interface SoftPreferences {
   preferences: Condition[];

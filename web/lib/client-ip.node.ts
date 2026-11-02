@@ -47,7 +47,7 @@ export function clientIp(
   request: Request,
   env: Record<string, string | undefined>,
 ): string {
-  if (env.BIPLAN_CLIENT_IP_MODE !== 'cloud-run-direct') return SHARED_CLIENT;
+  if (env.EVENT_REC_CLIENT_IP_MODE !== 'cloud-run-direct') return SHARED_CLIENT;
 
   const forwarded = request.headers.get('x-forwarded-for');
   if (!forwarded) return SHARED_CLIENT;

@@ -18,7 +18,7 @@ const child = spawn(process.execPath, ['server.js'], {
     PORT: '4173',
     DEPLOYMENT_ENV: 'staging',
     DEPLOYMENT_SHA: 'isolated-browser',
-    BIPLAN_CLIENT_IP_MODE: 'shared',
+    EVENT_REC_CLIENT_IP_MODE: 'shared',
   },
   stdio: 'inherit',
 });

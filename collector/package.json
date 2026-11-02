@@ -1,5 +1,5 @@
 {
-  "name": "biplan-collector",
+  "name": "event-rec-collector",
   "private": true,
   "type": "module",
   "scripts": {

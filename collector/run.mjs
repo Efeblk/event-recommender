@@ -109,10 +109,10 @@ const output = resolve(values.output),
 const coveragePath = resolve(values.coverage ?? join(dirname(snapshot), "coverage.json"));
 await mkdir(output, { recursive: true });
 await mkdir(dirname(snapshot), { recursive: true });
-const rawMirror = process.env.BIPLAN_RAW_GCS_ENABLED === 'true'
-  ? createGcsRawMirror({ bucket: process.env.BIPLAN_RAW_GCS_BUCKET ?? STAGING_RAW_BUCKET,
-    prefix: process.env.BIPLAN_RAW_GCS_PREFIX ?? STAGING_RAW_PREFIX,
-    accessToken: async () => process.env.BIPLAN_RAW_GCS_ACCESS_TOKEN }) : undefined;
+const rawMirror = process.env.EVENT_REC_RAW_GCS_ENABLED === 'true'
+  ? createGcsRawMirror({ bucket: process.env.EVENT_REC_RAW_GCS_BUCKET ?? STAGING_RAW_BUCKET,
+    prefix: process.env.EVENT_REC_RAW_GCS_PREFIX ?? STAGING_RAW_PREFIX,
+    accessToken: async () => process.env.EVENT_REC_RAW_GCS_ACCESS_TOKEN }) : undefined;
 const rawStore = await createFilesystemRawStore(resolve(values['raw-directory'] ?? join(dirname(snapshot), 'raw')),
   { maxBytes: Number(values['raw-max-bytes']), mirror: rawMirror });
 const rawResponses = new Map();
@@ -164,7 +164,7 @@ if (targets.length && values["discover-only"])
   throw new Error("Use --url for detail refresh, not discovery");
 for (const url of targets)
   if (!selected.some((source) => detailUrl(url, source))) throw new Error("Unsupported target URL");
-const userAgent = "BiPlan/0.2 (+https://github.com/Efeblk/event_recommender)";
+const userAgent = "EventRecommender/0.2 (+https://github.com/Efeblk/event-recommender)";
 const robots = new Map();
 let nextNetworkSlot = 0;
 let httpRequests = 0, activeCrawler = null, budgetStop = null;
@@ -194,7 +194,7 @@ async function get(url, options = {}, isRobots = false) {
     if (!allowedOrigins.has(origin)) throw new NonRetryableError("origin_not_allowed");
     if (!isRobots) {
       if (!robots.has(origin)) await loadRobots(origin);
-      if (!robots.get(origin)?.isAllowed(currentUrl, "BiPlan"))
+      if (!robots.get(origin)?.isAllowed(currentUrl, "EventRecommender"))
         throw new NonRetryableError("robots_disallowed");
     }
     const slot = Math.max(Date.now(), nextNetworkSlot);
@@ -210,7 +210,7 @@ async function get(url, options = {}, isRobots = false) {
     try {
       ({ receipt, body, bodyError } = await retainProviderResponse(response,
         { url: currentUrl, method: fetchOptions.method ?? 'GET', fetchedAt: new Date().toISOString(),
-          collectorRevision: process.env.BIPLAN_COLLECTOR_REVISION ?? process.env.GITHUB_SHA ?? 'local-uncommitted' },
+          collectorRevision: process.env.EVENT_REC_COLLECTOR_REVISION ?? process.env.GITHUB_SHA ?? 'local-uncommitted' },
         rawStore, isRobots ? 256000 : 4000000));
     } catch (error) {
       if (error?.message !== "raw_storage_admission_exceeded") throw error;
@@ -511,7 +511,7 @@ for (const url of targets) if (!rawInventory.some(entry => entry.url === url)) {
   if (provider) rawInventory.push({ url, provider });
 }
 await atomicJson(join(output, 'pipeline-raw-collection.json'), buildRawCollectionManifest({ startedAt,
-  collectorRevision: process.env.BIPLAN_COLLECTOR_REVISION ?? process.env.GITHUB_SHA ?? 'local-uncommitted',
+  collectorRevision: process.env.EVENT_REC_COLLECTOR_REVISION ?? process.env.GITHUB_SHA ?? 'local-uncommitted',
   inventory: rawInventory, receipts: rawPages, fetches: rawFetches,
   horizon: collectionCycle?.horizonStart ? { start: collectionCycle.horizonStart, end: collectionCycle.horizonEnd } : null }));
 if (values["discover-only"]) {

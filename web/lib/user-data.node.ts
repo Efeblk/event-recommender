@@ -53,7 +53,7 @@ let documentsPromise: Promise<DocumentCollection> | undefined;
  */
 export function userDocuments(): Promise<DocumentCollection> {
   return (documentsPromise ??= (async () => {
-    if (!env.GCP_STORAGE_BUCKET || !env.BIPLAN_GCP_PROJECT) return memoryDocuments();
+    if (!env.GCP_STORAGE_BUCKET || !env.EVENT_REC_GCP_PROJECT) return memoryDocuments();
     const config = gcpStorageConfigFromEnv(env);
     const { Firestore } = await import('@google-cloud/firestore');
     return firestoreDocuments(
@@ -90,7 +90,7 @@ export async function agentSessionService(): Promise<BaseSessionService> {
   if (sessionService) return sessionService;
   const documents = await userDocuments();
   sessionService =
-    env.GCP_STORAGE_BUCKET && env.BIPLAN_GCP_PROJECT
+    env.GCP_STORAGE_BUCKET && env.EVENT_REC_GCP_PROJECT
       ? new DocumentSessionService(documents, userDataNamespace())
       : new BoundedSessionService();
   return sessionService;

@@ -24,8 +24,8 @@ export async function restoreCheckpoint({ origin, token, output, fallback, allow
 
 async function main() {
   const { values } = parseArgs({ options: { output: { type: "string", default: "state/events.json" }, fallback: { type: "string" }, "allow-loopback-http": { type: "boolean", default: false } } });
-  const { BIPLAN_URL: origin, SYNC_TOKEN: token } = process.env;
-  if (!origin || !token) throw new Error("Set BIPLAN_URL and SYNC_TOKEN to restore a checkpoint.");
+  const { EVENT_REC_URL: origin, SYNC_TOKEN: token } = process.env;
+  if (!origin || !token) throw new Error("Set EVENT_REC_URL and SYNC_TOKEN to restore a checkpoint.");
   console.log(JSON.stringify(await restoreCheckpoint({ origin, token, output: resolve(values.output), fallback: values.fallback ? resolve(values.fallback) : undefined, allowLoopbackHttp: values["allow-loopback-http"] })));
 }
 

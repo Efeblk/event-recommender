@@ -9,7 +9,7 @@
 - [ ] `npm test`, `npm run typecheck` and `npm run lint` in `web/` (web changes)
 - [ ] `npm test` in `collector/` (collector changes)
 - [ ] `npm run eval:agent` in `web/` (agent changes)
-- [ ] `BIPLAN_BROWSER_START=1 npm run test:browser` after `npm run build:node` (UI changes)
+- [ ] `EVENT_REC_BROWSER_START=1 npm run test:browser` after `npm run build:node` (UI changes)
 - [ ] Links and diff checked (documentation changes)
 
 ## Rules

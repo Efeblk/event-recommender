@@ -32,7 +32,7 @@ function safeSource(source) {
   );
 }
 
-const temporaryWorkspace = await mkdtemp(join(tmpdir(), 'biplan-node-build-'));
+const temporaryWorkspace = await mkdtemp(join(tmpdir(), 'event-rec-node-build-'));
 const temporary = join(temporaryWorkspace, 'web');
 try {
   await mkdir(temporary);
@@ -77,7 +77,7 @@ try {
     cwd: temporary,
     env: {
       ...process.env,
-      BIPLAN_RUNTIME: 'node',
+      EVENT_REC_RUNTIME: 'node',
       NODE_PATH: nestedDependencies,
     },
     maxBuffer: 16 * 1024 * 1024,

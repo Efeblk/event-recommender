@@ -122,7 +122,7 @@ export const saveVoyageVectors: HighLevelStore['saveVoyageVectors'] = async (
   ...args
 ) => (await store()).saveVoyageVectors(...args);
 export function collectionStateConfigured() {
-  return Boolean(env.GCP_STORAGE_BUCKET && env.BIPLAN_GCP_PROJECT);
+  return Boolean(env.GCP_STORAGE_BUCKET && env.EVENT_REC_GCP_PROJECT);
 }
 
 export async function digest(text: string) {

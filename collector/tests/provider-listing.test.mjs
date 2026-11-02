@@ -158,7 +158,7 @@ test('runtime contract validator rejects arbitrary tier fields, bad raw ids and 
 });
 
 test('filesystem-retained primary and live supplementary fetches preserve exact refs and clocks', async (t) => {
-  const directory = await mkdtemp(join(tmpdir(), 'biplan-extract-flow-'));
+  const directory = await mkdtemp(join(tmpdir(), 'event-rec-extract-flow-'));
   t.after(() => rm(directory, { recursive: true, force: true }));
   const store = await createFilesystemRawStore(directory);
   const url = 'https://biletinial.com/tr-tr/sinema/film';

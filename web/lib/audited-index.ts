@@ -254,7 +254,7 @@ export async function indexAuditedBatch(
     indexed: cached.size,
     pending: pending.length,
   };
-  const base = `biplan/staging/embeddingIndex`,
+  const base = `event-rec/staging/embeddingIndex`,
     windowPath = `${base}/window`,
     runPath = `${base}/runs/entries/${input.runId}`;
   const windowId = await auditDigest(JSON.stringify(input.window));

@@ -78,7 +78,7 @@ async function invoke(
 ) {
   const environment: NodeJS.ProcessEnv = {
     ...process.env,
-    BIPLAN_URL: '',
+    EVENT_REC_URL: '',
   };
   if (options.serverlessToken === null) delete environment.SERVERLESS_ID_TOKEN;
   else
@@ -163,7 +163,7 @@ await test('embedding index command is a read-only status check by default', asy
 });
 
 await test('loopback command loads a quoted token from an isolated .dev.vars', async () => {
-  const root = await mkdtemp(join(tmpdir(), 'biplan-index-test-'));
+  const root = await mkdtemp(join(tmpdir(), 'event-rec-index-test-'));
   try {
     const scripts = join(root, 'scripts');
     await mkdir(scripts);

@@ -62,7 +62,7 @@ const input = parseAuditedIndexInput({
           maxCalls: Number(process.env.GCP_STAGING_INDEXING_MAX_CALLS),
         },
 });
-const origin = new URL(process.env.BIPLAN_URL ?? '');
+const origin = new URL(process.env.EVENT_REC_URL ?? '');
 const loopback = ['localhost', '127.0.0.1', '[::1]'].includes(origin.hostname);
 if (
   origin.username ||
@@ -125,7 +125,7 @@ async function request(method) {
         'X-Serverless-Authorization': `Bearer ${identity}`,
         ...(method === 'POST'
           ? {
-              'x-biplan-audited-index': '1',
+              'x-event-rec-audited-index': '1',
               'Content-Type': 'application/json',
             }
           : {}),

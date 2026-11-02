@@ -3,7 +3,7 @@
 # and fails closed without storage settings. No cloud or AI calls.
 set -euo pipefail
 IMAGE="${1:?usage: smoke-container.sh IMAGE}"
-NAME="biplan-smoke-$$"
+NAME="event-rec-smoke-$$"
 PORT="${SMOKE_PORT:-18080}"
 cleanup() { docker rm -f "$NAME" >/dev/null 2>&1 || true; }
 trap cleanup EXIT

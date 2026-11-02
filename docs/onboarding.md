@@ -27,7 +27,7 @@ meets each requirement. The project plan has priority over all other documents.
 
 ## 2. The product
 
-The product is **Bi' Plan**. It is an AI agent that plans outings in Istanbul.
+The product is **Event Recommender**. It is an AI agent that plans outings in Istanbul.
 A user writes in Turkish or English, for example:
 
 > Cumartesi akşamı Kadıköy'de 500 TL altı bir konser, sonra yakında bir şey daha
@@ -106,7 +106,7 @@ Read [the architecture](architecture.md) for the full request and data flow.
 | `contracts/` | Shared types and JSON schemas for listings and publications |
 | `infra/gcp/` | Terraform for the private staging project ([guide](../infra/gcp/README.md)) |
 | `.github/workflows/` | CI (`web.yml`) and the manual staging deploy (`gcp-staging.yml`) |
-| `docs/` | Project plan, architecture, this guide and the archived v1 plan |
+| `docs/` | Project plan, architecture and this guide |
 
 ## 6. Set up your computer
 
@@ -154,10 +154,10 @@ Read [CONTRIBUTING.md](../CONTRIBUTING.md). In short:
 Check the [status log](project-plan.md#status-log) for the latest state.
 On 2026-11-02:
 
-- Sprints 1–4 code is merged (PRs #7–#11). Features F1–F5 exist in code.
+- Features F1–F5 exist in code. CI is green.
 - Tests use a scripted model and fake services. There is no live Gemini run yet.
-- Staging still runs from the old repository `Efeblk/event_recommender`. The
-  Terraform and deploy workflow in this repository are not applied yet.
+- Nothing is deployed. The Terraform (`infra/gcp/`) and the deploy workflow
+  are ready, but staging needs a new GCP project first.
 - Open work is in the [Later list](project-plan.md#later) and the
   [user decisions](project-plan.md#decisions-the-user-must-make).
 - The [team roles](project-plan.md#team-and-roles-5-people) need names.

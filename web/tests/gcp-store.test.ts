@@ -217,7 +217,7 @@ const documentHash = (item: EventRecord) => createHash('sha256').update(voyageDo
 
 // Heads written before immediate activation can still hold a pending catalog.
 function legacyPendingHead(f: ReturnType<typeof fixture>) {
-  const path = 'biplan/default/state/catalog';
+  const path = 'event-rec/default/state/catalog';
   const { search, ...head } = f.control.documents.get(path)!;
   f.control.documents.set(path, { ...head, revision: 'legacy-pending', pendingSearch: search });
 }
@@ -240,7 +240,7 @@ await test('publication activates immediately; vectors are optional enrichment',
   assert.equal(state.checkpoint?.key, pointer.key);
   assert.equal(state.search?.pending, false);
   assert.equal(state.search?.checkpoint?.key, pointer.key);
-  assert.equal(f.control.documents.get('biplan/default/state/catalog')!.pendingSearch, undefined);
+  assert.equal(f.control.documents.get('event-rec/default/state/catalog')!.pendingSearch, undefined);
   const active = await f.makeStore().candidates(emptyFilters);
   assert.equal(active.length, 1, 'searchable before any vector exists');
   assert.equal(active[0].offers?.length, 2);
@@ -289,7 +289,7 @@ await test('checkpoint publication exposes only bounded phase and size diagnosti
       'phaseStartedElapsedMs',
     ].sort(),
   );
-  const stored = f.control.documents.get('biplan/default/state/checkpoint-publication')!;
+  const stored = f.control.documents.get('event-rec/default/state/checkpoint-publication')!;
   stored.privateDetail = 'must not escape';
   assert.equal(
     Object.hasOwn(await latestPublication(f.store) as object, 'privateDetail'),
@@ -419,7 +419,7 @@ await test('gated same-report upgrade replaces an unverified legacy projection w
   await assert.rejects(gated.candidates(emptyFilters), /requires publication/);
   await gated.publishCheckpoint(report(), sync);
   assert.equal((await gated.candidates(emptyFilters)).length, 1);
-  const head = f.control.documents.get('biplan/default/state/catalog')!;
+  const head = f.control.documents.get('event-rec/default/state/catalog')!;
   assert.equal((head.search as { profile?: string }).profile, profileA);
   assert.equal(head.pendingSearch, undefined);
 });
@@ -437,11 +437,11 @@ await test('a legacy pending catalog activates with missing vectors and keeps it
   await assert.rejects(f.store.activateSearchCatalog(profileA, sync), /Wrong storage lease/);
   f.control.failCatalogCommit = true;
   await assert.rejects(f.store.activateSearchCatalog(profileA, indexing), /publication failure/);
-  assert.ok(f.control.documents.get('biplan/default/state/catalog')!.pendingSearch);
+  assert.ok(f.control.documents.get('event-rec/default/state/catalog')!.pendingSearch);
   f.control.failCatalogCommit = false;
   assert.deepEqual(await f.store.activateSearchCatalog(profileA, indexing), { activated: true, pending: 1 });
   assert.equal((await f.makeStore().candidates(emptyFilters)).length, 1);
-  assert.equal(f.control.documents.get('biplan/default/state/catalog')!.pendingSearch, undefined);
+  assert.equal(f.control.documents.get('event-rec/default/state/catalog')!.pendingSearch, undefined);
 });
 
 await test('activation rejects catalog or vector publication races after validating immutable vectors', async () => {
@@ -461,7 +461,7 @@ await test('activation rejects catalog or vector publication races after validat
         if (!raced && key.startsWith('vectors/')) {
           raced = true;
           const path = changed === 'catalog'
-            ? 'biplan/default/state/catalog'
+            ? 'event-rec/default/state/catalog'
             : [...f.control.documents.keys()].find((value) => value.includes('/vectorProfiles/'))!;
           f.control.documents.get(path)!.revision = 'concurrent-publication';
         }
@@ -474,7 +474,7 @@ await test('activation rejects catalog or vector publication races after validat
     await assert.rejects(reader.activateSearchCatalog(profileA, indexing), /activation publication changed/);
     assert.equal(raced, true);
     assert.deepEqual(await f.store.candidates(emptyFilters), []);
-    assert.ok(f.control.documents.get('biplan/default/state/catalog')!.pendingSearch);
+    assert.ok(f.control.documents.get('event-rec/default/state/catalog')!.pendingSearch);
   }
 });
 
@@ -762,7 +762,7 @@ await test('expiry during source upload fences the durable head and releasing an
     f.store.importPages([page(event())], old),
     /lease expired/,
   );
-  assert.equal((await f.control.list('biplan/default/sources')).length, 0);
+  assert.equal((await f.control.list('event-rec/default/sources')).length, 0);
   f.blobs.onPut = undefined;
   const next = await syncLease(f.store);
   await f.store.releaseLease(old);
@@ -843,7 +843,7 @@ await test('concurrent cold catalog reads share one immutable search projection 
   const lease = await syncLease(f.store);
   await f.store.importPages([page(event())], lease);
   await f.store.publishCheckpoint(report(), lease);
-  const head = f.control.documents.get('biplan/default/state/catalog')!;
+  const head = f.control.documents.get('event-rec/default/state/catalog')!;
   const searchKey = (head.search as { key: string }).key;
   let searchReads = 0;
   let release!: () => void;
@@ -886,7 +886,7 @@ await test('search projection is published atomically and corruption fails close
   const lease = await syncLease(f.store);
   await f.store.importPages([page(event())], lease);
   const original = await f.store.publishCheckpoint(report(), lease);
-  const head = f.control.documents.get('biplan/default/state/catalog')!;
+  const head = f.control.documents.get('event-rec/default/state/catalog')!;
   const search = head.search as { key: string };
   assert.ok(search.key.startsWith('search-catalog/'));
   f.blobs.objects.set(search.key, '{}');
@@ -894,7 +894,7 @@ await test('search projection is published atomically and corruption fails close
   f.advance(1000);
   f.control.failCatalogCommit = true;
   await assert.rejects(f.store.publishCheckpoint(report(1000), lease), /publication failure/);
-  assert.deepEqual(f.control.documents.get('biplan/default/state/catalog'), head);
+  assert.deepEqual(f.control.documents.get('event-rec/default/state/catalog'), head);
   assert.equal((await f.store.checkpointPointer())?.key, original.key);
 });
 
@@ -903,12 +903,12 @@ await test('legacy raw publication requires explicit materialization and same-re
   const lease = await syncLease(f.store);
   await f.store.importPages([page(event())], lease);
   await f.store.publishCheckpoint(report(), lease);
-  const head = f.control.documents.get('biplan/default/state/catalog')!;
+  const head = f.control.documents.get('event-rec/default/state/catalog')!;
   delete head.search;
   const reader = f.makeStore();
   await assert.rejects(reader.candidates(emptyFilters), /requires publication/);
   await reader.publishCheckpoint(report(), lease);
-  assert.ok(f.control.documents.get('biplan/default/state/catalog')!.search);
+  assert.ok(f.control.documents.get('event-rec/default/state/catalog')!.search);
   assert.equal((await reader.candidates(emptyFilters)).length, 1);
   assert.deepEqual(JSON.parse((await reader.readCheckpoint())!).events, [event()]);
 });

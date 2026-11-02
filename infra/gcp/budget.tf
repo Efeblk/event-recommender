@@ -2,7 +2,7 @@
 resource "google_billing_budget" "staging" {
   count           = var.budget_billing_account != "" ? 1 : 0
   billing_account = var.budget_billing_account
-  display_name    = "Bi Plan staging monthly alert"
+  display_name    = "Event Recommender staging monthly alert"
   budget_filter {
     projects               = ["projects/${data.google_project.selected.number}"]
     calendar_period        = "MONTH"

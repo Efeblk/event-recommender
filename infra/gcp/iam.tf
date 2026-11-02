@@ -4,14 +4,14 @@
 resource "google_service_account" "runtime" {
   project      = var.project_id
   account_id   = "${local.prefix}-runtime"
-  display_name = "Bi Plan staging runtime"
+  display_name = "Event Recommender staging runtime"
   depends_on   = [google_project_service.required]
 }
 
 resource "google_service_account" "deploy" {
   project      = var.project_id
   account_id   = "${local.prefix}-deploy"
-  display_name = "Bi Plan staging GitHub deployment"
+  display_name = "Event Recommender staging GitHub deployment"
   depends_on   = [google_project_service.required]
 }
 
@@ -62,8 +62,8 @@ resource "google_project_iam_member" "deploy_run" {
 # existing allUsers grant. run.admin would give unrelated rights.
 resource "google_project_iam_custom_role" "private_service_policy" {
   project     = var.project_id
-  role_id     = "biplanStagingServicePolicy"
-  title       = "Bi Plan staging service IAM"
+  role_id     = "eventRecStagingServicePolicy"
+  title       = "Event Recommender staging service IAM"
   description = "Read and update the Cloud Run invocation policy in the staging project"
   permissions = ["run.services.getIamPolicy", "run.services.setIamPolicy"]
   depends_on  = [google_project_service.required]
@@ -83,8 +83,8 @@ resource "google_service_account_iam_member" "deploy_runtime_identity" {
 
 resource "google_iam_workload_identity_pool" "github" {
   project                   = var.project_id
-  workload_identity_pool_id = "biplan-github-staging"
-  display_name              = "Bi Plan GitHub staging"
+  workload_identity_pool_id = "event-rec-github-staging"
+  display_name              = "Event Recommender GitHub staging"
   depends_on                = [google_project_service.required]
 }
 

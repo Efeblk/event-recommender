@@ -41,7 +41,7 @@ try {
     if (!vectorLease) throw new Error('Vector bootstrap lease is unavailable.');
   }
   const [published, stagedSources, vectorProfiles] = await Promise.all([
-    store.currentPublished(), clients.control.list(`biplan/${namespace}/sources`), clients.control.list(`biplan/${namespace}/vectorProfiles`),
+    store.currentPublished(), clients.control.list(`event-rec/${namespace}/sources`), clients.control.list(`event-rec/${namespace}/vectorProfiles`),
   ]);
   if (published.checkpoint || published.catalog.stored || stagedSources.length || vectorProfiles.length) throw new Error('Target is not empty; bootstrap refuses to overwrite it.');
   await clients.blobs.putImmutable(`migration-audit/${namespace}/${plan.checkpointSha256}.json`, plan.rawCheckpoint);

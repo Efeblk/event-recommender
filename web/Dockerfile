@@ -12,7 +12,7 @@ FROM node:22.23.3-bookworm-slim AS runtime
 ENV NODE_ENV=production \
     HOST=0.0.0.0 \
     PORT=8080 \
-    BIPLAN_RUNTIME=node
+    EVENT_REC_RUNTIME=node
 WORKDIR /app
 COPY --from=build --chown=node:node /app/web/dist-node/ ./
 USER node

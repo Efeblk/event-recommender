@@ -76,15 +76,15 @@ jobs:
           npm run test:smoke:node
       - name: Build immutable Linux image
         env:
-          LOCAL_IMAGE: biplan-gcp-candidate:${{ inputs.expected_sha }}
+          LOCAL_IMAGE: event-rec-gcp-candidate:${{ inputs.expected_sha }}
         run: docker build --pull --platform linux/amd64 -f Dockerfile --tag "$LOCAL_IMAGE" ..
       - name: Smoke the image without credentials
         env:
-          LOCAL_IMAGE: biplan-gcp-candidate:${{ inputs.expected_sha }}
+          LOCAL_IMAGE: event-rec-gcp-candidate:${{ inputs.expected_sha }}
         run: bash scripts/smoke-container.sh "$LOCAL_IMAGE"
       - name: Package image and provenance
         env:
-          LOCAL_IMAGE: biplan-gcp-candidate:${{ inputs.expected_sha }}
+          LOCAL_IMAGE: event-rec-gcp-candidate:${{ inputs.expected_sha }}
         run: |
           set -euo pipefail
           rm -rf gcp-candidate
@@ -177,9 +177,9 @@ jobs:
           secret GCP_GEMINI_API_KEY_SECRET GCP_GEMINI_API_KEY_SECRET_VERSION GEMINI_API_KEY optional
           secret GCP_GOOGLE_MAPS_API_KEY_SECRET GCP_GOOGLE_MAPS_API_KEY_SECRET_VERSION GOOGLE_MAPS_API_KEY optional
           ENV_VARS=(
-            BIPLAN_RUNTIME=node "BIPLAN_GCP_PROJECT=$GCP_PROJECT_ID" "GCP_STORAGE_BUCKET=$GCP_COLLECTION_BUCKET"
+            EVENT_REC_RUNTIME=node "EVENT_REC_GCP_PROJECT=$GCP_PROJECT_ID" "GCP_STORAGE_BUCKET=$GCP_COLLECTION_BUCKET"
             "FIRESTORE_DATABASE=$GCP_FIRESTORE_DATABASE" DEPLOYMENT_ENV=staging "DEPLOYMENT_SHA=$EXPECTED_SHA"
-            BIPLAN_CLIENT_IP_MODE=shared BIPLAN_PREVIEW_TESTING=false AI_DAILY_LIMIT=100 VOYAGE_DIMENSIONS=1024
+            EVENT_REC_CLIENT_IP_MODE=shared EVENT_REC_PREVIEW_TESTING=false AI_DAILY_LIMIT=100 VOYAGE_DIMENSIONS=1024
             "INPUT_INTERPRETER=$INPUT_INTERPRETER"
           )
           [[ "$GCP_AGENT_VERTEX_AI" == 'true' || "$GCP_AGENT_VERTEX_AI" == 'false' ]]
@@ -188,7 +188,7 @@ jobs:
           fi
           if [[ -n "${GCP_AGENT_MODEL:-}" ]]; then
             [[ "$GCP_AGENT_MODEL" =~ ^[a-z0-9][a-z0-9.-]{1,80}$ ]]
-            ENV_VARS+=("BIPLAN_AGENT_MODEL=$GCP_AGENT_MODEL")
+            ENV_VARS+=("EVENT_REC_AGENT_MODEL=$GCP_AGENT_MODEL")
           fi
           if [[ -n "${FIREBASE_PROJECT_ID:-}${FIREBASE_WEB_API_KEY:-}${FIREBASE_AUTH_DOMAIN:-}" ]]; then
             [[ "$FIREBASE_WEB_API_KEY" =~ ^[A-Za-z0-9_-]{20,80}$ ]]
@@ -222,7 +222,7 @@ jobs:
         id: image
         run: |
           set -euo pipefail
-          LOCAL_IMAGE="biplan-gcp-candidate:$EXPECTED_SHA"
+          LOCAL_IMAGE="event-rec-gcp-candidate:$EXPECTED_SHA"
           REMOTE_TAG="$GCP_REGION-docker.pkg.dev/$GCP_PROJECT_ID/$GCP_ARTIFACT_REGISTRY_REPOSITORY/$GCP_CLOUD_RUN_SERVICE:$EXPECTED_SHA"
           gcloud auth configure-docker "$GCP_REGION-docker.pkg.dev" --quiet
           docker tag "$LOCAL_IMAGE" "$REMOTE_TAG"
@@ -255,7 +255,7 @@ jobs:
             if(r.metadata?.name!==process.env.CANDIDATE_REVISION||r.status?.conditions?.find(x=>x.type==='Ready')?.status!=='True')throw new Error('Revision is not ready.');
             if(!c||c.image!==process.env.IMAGE_REF)throw new Error('Revision image does not match the reviewed digest.');
             const v=Object.fromEntries((c.env??[]).filter(x=>typeof x?.value==='string').map(x=>[x.name,x.value]));
-            for(const [k,e] of [['BIPLAN_RUNTIME','node'],['DEPLOYMENT_ENV','staging'],['DEPLOYMENT_SHA',process.env.EXPECTED_SHA]])if(v[k]!==e)throw new Error('Revision has invalid '+k+'.');"
+            for(const [k,e] of [['EVENT_REC_RUNTIME','node'],['DEPLOYMENT_ENV','staging'],['DEPLOYMENT_SHA',process.env.EXPECTED_SHA]])if(v[k]!==e)throw new Error('Revision has invalid '+k+'.');"
           echo "name=$CANDIDATE_REVISION" >> "$GITHUB_OUTPUT"
       - name: Send all traffic to the verified revision
         env:

@@ -78,8 +78,8 @@ export default function SavedPage() {
   return (
     <div className="site-shell">
       <header className="site-header">
-        <Link href="/" className="brand" aria-label="Bi’ Plan ana sayfa">
-          bi’ plan<span>✳</span>
+        <Link href="/" className="brand" aria-label="Event Recommender ana sayfa">
+          event recommender<span>✳</span>
         </Link>
         <nav aria-label="Ana menü">
           <Link href="/plan">Plan asistanı</Link>

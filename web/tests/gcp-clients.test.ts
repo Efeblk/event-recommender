@@ -14,8 +14,8 @@ import {
 
 const config: GcpStorageConfig = {
   environment: 'staging',
-  projectId: 'biplan-demo-2026',
-  bucket: 'biplan-demo-staging-data',
+  projectId: 'event-rec-demo-2026',
+  bucket: 'event-rec-demo-staging-data',
   databaseId: '(default)',
   maxBlobBytes: 1024,
 };
@@ -117,7 +117,7 @@ void test('validates explicit environment and bounded blob configuration', () =>
   assert.equal(
     gcpStorageConfigFromEnv({
       DEPLOYMENT_ENV: 'staging',
-      BIPLAN_GCP_PROJECT: 'biplan-demo-2026',
+      EVENT_REC_GCP_PROJECT: 'event-rec-demo-2026',
       GCP_STORAGE_BUCKET: 'existing-staging-bucket',
     }).maxBlobBytes,
     128 * 1024 * 1024,
@@ -125,14 +125,14 @@ void test('validates explicit environment and bounded blob configuration', () =>
   assert.deepEqual(
     gcpStorageConfigFromEnv({
       DEPLOYMENT_ENV: 'production',
-      BIPLAN_GCP_PROJECT: 'biplan-demo-2026',
+      EVENT_REC_GCP_PROJECT: 'event-rec-demo-2026',
       GCP_STORAGE_BUCKET: 'existing-production-bucket',
       FIRESTORE_DATABASE: '(default)',
       GCP_MAX_BLOB_BYTES: '1024',
     }),
     {
       environment: 'production',
-      projectId: 'biplan-demo-2026',
+      projectId: 'event-rec-demo-2026',
       bucket: 'existing-production-bucket',
       databaseId: '(default)',
       maxBlobBytes: 1024,
@@ -142,7 +142,7 @@ void test('validates explicit environment and bounded blob configuration', () =>
     () =>
       gcpStorageConfigFromEnv({
         DEPLOYMENT_ENV: 'preview',
-        BIPLAN_GCP_PROJECT: 'biplan-demo-2026',
+        EVENT_REC_GCP_PROJECT: 'event-rec-demo-2026',
         GCP_STORAGE_BUCKET: 'bucket-name',
       }),
     /DEPLOYMENT_ENV/,
@@ -151,7 +151,7 @@ void test('validates explicit environment and bounded blob configuration', () =>
     () =>
       gcpStorageConfigFromEnv({
         DEPLOYMENT_ENV: 'staging',
-        BIPLAN_GCP_PROJECT: 'biplan-demo-2026',
+        EVENT_REC_GCP_PROJECT: 'event-rec-demo-2026',
         GCP_STORAGE_BUCKET: 'bucket-name',
         GCP_MAX_BLOB_BYTES: String(129 * 1024 * 1024),
       }),
@@ -178,42 +178,42 @@ void test('constructs official SDK clients with project and database configurati
   await createGcpClients(
     {
       DEPLOYMENT_ENV: 'staging',
-      BIPLAN_GCP_PROJECT: 'biplan-demo-2026',
-      GCP_STORAGE_BUCKET: 'biplan-staging-data',
+      EVENT_REC_GCP_PROJECT: 'event-rec-demo-2026',
+      GCP_STORAGE_BUCKET: 'event-rec-staging-data',
     },
     { Firestore, Storage } as unknown as GcpSdkConstructors,
   );
   assert.deepEqual(seen, {
-    firestore: { projectId: 'biplan-demo-2026', databaseId: '(default)' },
-    storage: { projectId: 'biplan-demo-2026' },
+    firestore: { projectId: 'event-rec-demo-2026', databaseId: '(default)' },
+    storage: { projectId: 'event-rec-demo-2026' },
   });
 });
 
 void test('control store supports nested paths and enforces transaction reads first', async () => {
   const fire = firestoreFake({
-    'biplan/staging/runs/one': { state: 'ready' },
-    'biplan/staging/runs/two': { state: 'pending' },
+    'event-rec/staging/runs/one': { state: 'ready' },
+    'event-rec/staging/runs/two': { state: 'pending' },
   });
   const { control } = createGcpStores(config, {
     firestore: fire.firestore,
     storage: storageFake().storage,
   });
-  assert.deepEqual(await control.get('biplan/staging/runs/one'), { state: 'ready' });
-  assert.equal((await control.list('biplan/staging/runs')).length, 2);
+  assert.deepEqual(await control.get('event-rec/staging/runs/one'), { state: 'ready' });
+  assert.equal((await control.list('event-rec/staging/runs')).length, 2);
   await control.transaction(async (transaction) => {
-    assert.deepEqual(await transaction.get('biplan/staging/runs/one'), { state: 'ready' });
-    transaction.set('biplan/staging/runs/three', { state: 'new' });
-    transaction.delete('biplan/staging/runs/two');
+    assert.deepEqual(await transaction.get('event-rec/staging/runs/one'), { state: 'ready' });
+    transaction.set('event-rec/staging/runs/three', { state: 'new' });
+    transaction.delete('event-rec/staging/runs/two');
   });
   assert.equal(fire.maxAttempts(), 5);
   assert.deepEqual(fire.writes, [
-    'set:biplan/staging/runs/three',
-    'delete:biplan/staging/runs/two',
+    'set:event-rec/staging/runs/three',
+    'delete:event-rec/staging/runs/two',
   ]);
   await assert.rejects(
     control.transaction(async (transaction) => {
-      transaction.set('biplan/staging/runs/three', { state: 'changed' });
-      await transaction.get('biplan/staging/runs/one');
+      transaction.set('event-rec/staging/runs/three', { state: 'changed' });
+      await transaction.get('event-rec/staging/runs/one');
     }),
     /reads must precede writes/,
   );

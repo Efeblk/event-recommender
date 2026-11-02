@@ -476,7 +476,7 @@ await test('observed-token overshoot is retained and halts after its one bounded
   await assert.rejects(f.run(), /halted/);
   assert.equal(f.calls, 1);
   const state = await f.control.get<{ tokens: number; halted: boolean }>(
-    'biplan/staging/embeddingIndex/window',
+    'event-rec/staging/embeddingIndex/window',
   );
   assert.equal(state?.tokens, auditIndexLimits.observedTokensPerRun + 1);
   assert.equal(state?.halted, true);
@@ -544,7 +544,7 @@ await test('catalog change during the charged call preserves raw evidence withou
 });
 await test('corrupt durable budget state fails closed before a paid request', async () => {
   const f = await fixture();
-  f.control.rows.set('biplan/staging/embeddingIndex/window', {
+  f.control.rows.set('event-rec/staging/embeddingIndex/window', {
     id: 'a'.repeat(64),
     calls: Number.NaN,
   });

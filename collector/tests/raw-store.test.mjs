@@ -8,7 +8,7 @@ import { createGcsRawMirror, STAGING_RAW_BUCKET, STAGING_RAW_PREFIX } from '../r
 const metadata = { url: 'https://www.bubilet.com.tr/istanbul/etkinlik/test', status: 200, fetchedAt: '2026-10-02T10:00:00Z', headers: { 'content-type': 'text/html', 'set-cookie': 'private' } };
 
 test('raw bodies deduplicate while every fetch retains metadata and corruption fails closed', async t => {
-  const directory = await mkdtemp(join(tmpdir(), 'biplan-raw-'));
+  const directory = await mkdtemp(join(tmpdir(), 'event-rec-raw-'));
   t.after(() => rm(directory, { recursive: true, force: true }));
   const store = await createFilesystemRawStore(directory);
   const first = await store.put(Buffer.from([0xff, 0x00, 0xc3]), metadata);
@@ -25,7 +25,7 @@ test('raw bodies deduplicate while every fetch retains metadata and corruption f
 });
 
 test('raw admission covers existing files and rejects growth without deleting references', async t => {
-  const directory = await mkdtemp(join(tmpdir(), 'biplan-raw-limit-'));
+  const directory = await mkdtemp(join(tmpdir(), 'event-rec-raw-limit-'));
   t.after(() => rm(directory, { recursive: true, force: true }));
   const store = await createFilesystemRawStore(directory, { maxBytes: 10 });
   await assert.rejects(store.put(Buffer.alloc(11), metadata), /admission/);

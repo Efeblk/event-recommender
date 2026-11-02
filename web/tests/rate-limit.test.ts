@@ -17,7 +17,7 @@ await test('preview testing disables only visitor limits in staging', () => {
   assert.equal(
     visitorRateLimitEnabled({
       DEPLOYMENT_ENV: 'staging',
-      BIPLAN_PREVIEW_TESTING: 'true',
+      EVENT_REC_PREVIEW_TESTING: 'true',
     }),
     false,
   );
@@ -27,7 +27,7 @@ await test('production cannot bypass visitor limits with the preview flag', () =
   assert.equal(
     visitorRateLimitEnabled({
       DEPLOYMENT_ENV: 'production',
-      BIPLAN_PREVIEW_TESTING: 'true',
+      EVENT_REC_PREVIEW_TESTING: 'true',
     }),
     true,
   );
@@ -37,7 +37,7 @@ await test('preview flag does not alter the global daily AI bucket', async () =>
   assert.equal(
     visitorRateLimitEnabled({
       DEPLOYMENT_ENV: 'staging',
-      BIPLAN_PREVIEW_TESTING: 'true',
+      EVENT_REC_PREVIEW_TESTING: 'true',
     }),
     false,
   );

@@ -1,4 +1,4 @@
-name: Bi Plan
+name: Event Recommender
 on:
   push:
     branches: [master]
@@ -66,7 +66,7 @@ jobs:
         run: npx playwright install --with-deps chromium
       - name: Verify desktop and mobile browser flows without API calls
         env:
-          BIPLAN_BROWSER_START: '1'
+          EVENT_REC_BROWSER_START: '1'
         run: npx playwright test
   container:
     runs-on: ubuntu-latest
@@ -76,9 +76,9 @@ jobs:
         with:
           persist-credentials: false
       - name: Build the Linux image without credentials
-        run: docker build -f web/Dockerfile --tag biplan-ci:${{ github.sha }} .
+        run: docker build -f web/Dockerfile --tag event-rec-ci:${{ github.sha }} .
       - name: Smoke the image without credentials
-        run: bash web/scripts/smoke-container.sh biplan-ci:${{ github.sha }}
+        run: bash web/scripts/smoke-container.sh event-rec-ci:${{ github.sha }}
   terraform:
     runs-on: ubuntu-latest
     timeout-minutes: 10

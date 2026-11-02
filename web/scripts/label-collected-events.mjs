@@ -17,7 +17,7 @@ if (!Number.isSafeInteger(tokenCap) || tokenCap < 1) {
   console.log('Event labeling is disabled; no requests made.');
   process.exit(0);
 }
-const origin = new URL(process.env.BIPLAN_URL ?? '');
+const origin = new URL(process.env.EVENT_REC_URL ?? '');
 if (origin.protocol !== 'https:' || !origin.hostname.endsWith('.run.app') || origin.pathname !== '/')
   throw new Error('An exact private Cloud Run origin is required');
 const sync = process.env.SYNC_TOKEN?.trim(),
