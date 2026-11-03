@@ -137,7 +137,8 @@ test.describe('browser contracts', () => {
       sawScript = resolve;
     });
     let firstScript = true;
-    await page.route('**/page-*.js', async (route) => {
+    // Hold every client chunk so the page stays server-rendered until release.
+    await page.route('**/_next/static/**/*.js', async (route) => {
       if (firstScript) {
         firstScript = false;
         sawScript();

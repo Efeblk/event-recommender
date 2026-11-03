@@ -206,3 +206,11 @@ production URL.
   and `dependency-review` jobs. GitHub: a ruleset on `master` blocks direct
   pushes, force pushes and deletion, and requires a PR with one approval and
   green CI. Only squash merges.
+- 2026-11-03: PR #12 merged (`7f50e7e`). Security updates: vite 8.3.5,
+  vinext 1.4.2 with React 19.3.1 and `@vitejs/plugin-rsc` 0.5.38, overrides
+  for `@grpc/grpc-js` 1.14.7 and `fflate` 0.7.5, `npm audit fix` in both
+  packages (collector `undici`). This closes all high-severity alerts.
+  Moderate alerts stay open for `uuid`, `glob`, `minimatch` (web, inside
+  Google libraries) and `minimatch` (collector, inside Crawlee): each fix
+  needs a major upgrade upstream. The hydration browser test now holds
+  `/_next/static/` chunks, because vinext 1.4 renamed them.
