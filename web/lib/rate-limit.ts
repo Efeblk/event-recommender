@@ -18,13 +18,13 @@ export type LimitConsumer = (
 
 export interface VisitorRateLimitEnv {
   DEPLOYMENT_ENV?: string;
-  BIPLAN_PREVIEW_TESTING?: string;
+  EVENT_REC_PREVIEW_TESTING?: string;
 }
 
 /** Temporarily allows unrestricted visitor testing only in staging. */
 export function visitorRateLimitEnabled(env: VisitorRateLimitEnv) {
   return !(
-    env.DEPLOYMENT_ENV === 'staging' && env.BIPLAN_PREVIEW_TESTING === 'true'
+    env.DEPLOYMENT_ENV === 'staging' && env.EVENT_REC_PREVIEW_TESTING === 'true'
   );
 }
 

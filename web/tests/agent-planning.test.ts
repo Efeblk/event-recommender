@@ -79,8 +79,8 @@ function token(payload: Record<string, unknown>, header: Record<string, unknown>
   return `${body}.${signature}`;
 }
 const claims = {
-  iss: 'https://securetoken.google.com/biplan-test',
-  aud: 'biplan-test',
+  iss: 'https://securetoken.google.com/event-rec-test',
+  aud: 'event-rec-test',
   sub: 'user_1',
   iat: nowS - 10,
   exp: nowS + 3000,
@@ -90,11 +90,11 @@ const claims = {
 const keys = async (kid: string) => (kid === 'k1' ? publicKey : null);
 
 await test('Firebase ID tokens verify signature, issuer, audience and time', async () => {
-  const user = await verifyFirebaseIdToken(token(claims), 'biplan-test', keys, nowS * 1000);
+  const user = await verifyFirebaseIdToken(token(claims), 'event-rec-test', keys, nowS * 1000);
   assert.deepEqual(user, { uid: 'user_1', anonymous: false, email: 'a@example.com', name: null });
   const anonymous = await verifyFirebaseIdToken(
     token({ ...claims, firebase: { sign_in_provider: 'anonymous' } }),
-    'biplan-test',
+    'event-rec-test',
     keys,
     nowS * 1000,
   );
@@ -111,7 +111,7 @@ await test('Firebase ID tokens verify signature, issuer, audience and time', asy
     'not.a.jwt',
     '',
   ])
-    assert.equal(await verifyFirebaseIdToken(bad, 'biplan-test', keys, nowS * 1000), null);
+    assert.equal(await verifyFirebaseIdToken(bad, 'event-rec-test', keys, nowS * 1000), null);
 });
 
 await test('bearer tokens and public Firebase settings are read strictly', () => {
@@ -120,10 +120,10 @@ await test('bearer tokens and public Firebase settings are read strictly', () =>
   assert.equal(bearerToken(request('Basic abc')), null);
   assert.equal(bearerToken(request('Bearer a b')), null);
   assert.equal(firebaseWebConfigFrom({}), null);
-  assert.deepEqual(firebaseWebConfigFrom({ FIREBASE_WEB_API_KEY: 'k', FIREBASE_PROJECT_ID: 'biplan-test' }), {
+  assert.deepEqual(firebaseWebConfigFrom({ FIREBASE_WEB_API_KEY: 'k', FIREBASE_PROJECT_ID: 'event-rec-test' }), {
     apiKey: 'k',
-    projectId: 'biplan-test',
-    authDomain: 'biplan-test.firebaseapp.com',
+    projectId: 'event-rec-test',
+    authDomain: 'event-rec-test.firebaseapp.com',
   });
 });
 
@@ -159,20 +159,20 @@ await test('user store keeps each user separate and enforces limits', async () =
 await test('agent sessions persist in documents and stay with their owner', async () => {
   const documents = memoryDocuments();
   const service = new DocumentSessionService(documents, 'test', () => 1000);
-  const session = await service.createSession({ appName: 'biplan', userId: 'alice', sessionId: 'session-1' });
+  const session = await service.createSession({ appName: 'event-rec', userId: 'alice', sessionId: 'session-1' });
   await service.appendEvent({
     session,
     event: { id: 'e1', invocationId: 'i', author: 'user', actions: {} as never, timestamp: 1, content: { role: 'user', parts: [{ text: 'merhaba' }] } },
   });
   const restored = await new DocumentSessionService(documents, 'test').getSession({
-    appName: 'biplan',
+    appName: 'event-rec',
     userId: 'alice',
     sessionId: 'session-1',
   });
   assert.equal(restored?.events.length, 1);
-  assert.equal(await service.getSession({ appName: 'biplan', userId: 'bob', sessionId: 'session-1' }), undefined);
-  await service.deleteSession({ appName: 'biplan', userId: 'alice', sessionId: 'session-1' });
-  assert.equal(await service.getSession({ appName: 'biplan', userId: 'alice', sessionId: 'session-1' }), undefined);
+  assert.equal(await service.getSession({ appName: 'event-rec', userId: 'bob', sessionId: 'session-1' }), undefined);
+  await service.deleteSession({ appName: 'event-rec', userId: 'alice', sessionId: 'session-1' });
+  assert.equal(await service.getSession({ appName: 'event-rec', userId: 'alice', sessionId: 'session-1' }), undefined);
 });
 
 await test('session trimming keeps whole turns', () => {

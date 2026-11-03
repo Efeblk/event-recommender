@@ -1,0 +1,22 @@
+# Weekly update PRs. Each PR goes through CI and a teammate review like any other PR.
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    groups:
+      actions:
+        patterns: ['*']
+  - package-ecosystem: npm
+    directories: [/web, /collector]
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+    groups:
+      minor-and-patch:
+        update-types: [minor, patch]
+  - package-ecosystem: terraform
+    directory: /infra/gcp
+    schedule:
+      interval: monthly

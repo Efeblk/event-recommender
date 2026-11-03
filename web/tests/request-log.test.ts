@@ -5,9 +5,9 @@ import { validateInput } from '../lib/recommend.ts';
 import { emptyFilters, type SearchResult } from '../lib/types.ts';
 
 void test('the request log records only during an approved staging test', () => {
-  assert.equal(requestLogEnabled({ DEPLOYMENT_ENV: 'staging', BIPLAN_PREVIEW_TESTING: 'true' }), true);
-  assert.equal(requestLogEnabled({ DEPLOYMENT_ENV: 'staging', BIPLAN_PREVIEW_TESTING: 'false' }), false);
-  assert.equal(requestLogEnabled({ DEPLOYMENT_ENV: 'production', BIPLAN_PREVIEW_TESTING: 'true' }), false);
+  assert.equal(requestLogEnabled({ DEPLOYMENT_ENV: 'staging', EVENT_REC_PREVIEW_TESTING: 'true' }), true);
+  assert.equal(requestLogEnabled({ DEPLOYMENT_ENV: 'staging', EVENT_REC_PREVIEW_TESTING: 'false' }), false);
+  assert.equal(requestLogEnabled({ DEPLOYMENT_ENV: 'production', EVENT_REC_PREVIEW_TESTING: 'true' }), false);
   assert.equal(requestLogEnabled({}), false);
 });
 
@@ -28,6 +28,6 @@ void test('an entry keeps the request, its context, the parser judgments and the
     parse: { status: 'accepted', reason: null, answers: { date: 'tomorrow:1.00' } },
     status: 'results', notice: null, plan: result.planState!.plan, recommendationIds: ['e1'],
   });
-  assert.equal(requestLogKey('staging', entry), 'biplan/staging/requestLog/2026-10-06/2026-10-06T17-00-00-000Z-123e4567-e89b-42d3-a456-426614174000.json');
+  assert.equal(requestLogKey('staging', entry), 'event-rec/staging/requestLog/2026-10-06/2026-10-06T17-00-00-000Z-123e4567-e89b-42d3-a456-426614174000.json');
   assert.throws(() => requestLogKey('../x', entry));
 });

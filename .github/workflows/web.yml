@@ -1,4 +1,4 @@
-name: Bi Plan
+name: Event Recommender
 on:
   push:
     branches: [master]
@@ -20,8 +20,10 @@ jobs:
     runs-on: ${{ matrix.os }}
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
-      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version-file: web/.nvmrc
           cache: npm
@@ -39,8 +41,10 @@ jobs:
       run:
         working-directory: web
     steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
-      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version-file: web/.nvmrc
           cache: npm
@@ -62,17 +66,19 @@ jobs:
         run: npx playwright install --with-deps chromium
       - name: Verify desktop and mobile browser flows without API calls
         env:
-          BIPLAN_BROWSER_START: '1'
+          EVENT_REC_BROWSER_START: '1'
         run: npx playwright test
   container:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
       - name: Build the Linux image without credentials
-        run: docker build -f web/Dockerfile --tag biplan-ci:${{ github.sha }} .
+        run: docker build -f web/Dockerfile --tag event-rec-ci:${{ github.sha }} .
       - name: Smoke the image without credentials
-        run: bash web/scripts/smoke-container.sh biplan-ci:${{ github.sha }}
+        run: bash web/scripts/smoke-container.sh event-rec-ci:${{ github.sha }}
   terraform:
     runs-on: ubuntu-latest
     timeout-minutes: 10
@@ -80,8 +86,10 @@ jobs:
       run:
         working-directory: infra/gcp
     steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
-      - uses: hashicorp/setup-terraform@b9cd54a3c349d3f38e8881555d616ced269862dd # v3.1.2
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: hashicorp/setup-terraform@dfe3c3f87815947d99a8997f908cb6525fc44e9e # v4.0.1
         with:
           terraform_version: 1.16.4
       - run: terraform fmt -check -recursive
@@ -89,3 +97,27 @@ jobs:
       - run: terraform validate
       - name: Check private staging plans without Google credentials
         run: terraform test
+  docs:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: web/.nvmrc
+      - name: Check relative links in Markdown files without network calls
+        run: node .github/scripts/check-doc-links.mjs
+  dependency-review:
+    # Blocks pull requests that add dependencies with known high-severity vulnerabilities.
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/dependency-review-action@a1d282b36b6f3519aa1f3fc636f609c47dddb294 # v5.0.0
+        with:
+          fail-on-severity: high

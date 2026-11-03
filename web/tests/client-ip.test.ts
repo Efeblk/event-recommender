@@ -7,7 +7,7 @@ function request(headers: Record<string, string> = {}): Request {
   return new Request('https://service.run.app/api', { headers });
 }
 
-const direct = { BIPLAN_CLIENT_IP_MODE: 'cloud-run-direct' };
+const direct = { EVENT_REC_CLIENT_IP_MODE: 'cloud-run-direct' };
 
 void test('defaults to one shared bucket and fails closed for unknown modes', () => {
   const headers = {
@@ -15,8 +15,8 @@ void test('defaults to one shared bucket and fails closed for unknown modes', ()
     'x-forwarded-for': '192.0.2.1',
   };
   assert.equal(clientIp(request(headers), {}), 'shared');
-  assert.equal(clientIp(request(headers), { BIPLAN_CLIENT_IP_MODE: 'shared' }), 'shared');
-  assert.equal(clientIp(request(headers), { BIPLAN_CLIENT_IP_MODE: 'typo' }), 'shared');
+  assert.equal(clientIp(request(headers), { EVENT_REC_CLIENT_IP_MODE: 'shared' }), 'shared');
+  assert.equal(clientIp(request(headers), { EVENT_REC_CLIENT_IP_MODE: 'typo' }), 'shared');
 });
 
 void test('direct Cloud Run mode trusts only the rightmost appended address', () => {

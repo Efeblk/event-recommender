@@ -102,7 +102,7 @@ function EventCard({ event }: { event: EventRecord }) {
         ) : (
           <div className="poster-fallback" aria-hidden="true">
             <Ticket />
-            <span>bi’ plan</span>
+            <span>event recommender</span>
           </div>
         )}
         <span className="category-tag">{event.category}</span>
@@ -472,9 +472,9 @@ export default function Home() {
           href="/"
           className="brand"
           onClick={reset}
-          aria-label="Bi’ Plan ana sayfa"
+          aria-label="Event Recommender ana sayfa"
         >
-          bi’ plan<span>✳</span>
+          event recommender<span>✳</span>
         </Link>
         <nav aria-label="Ana menü">
           <Link href="/plan">Plan asistanı</Link>
@@ -796,7 +796,7 @@ export default function Home() {
             <p className="kicker">
               <Sparkles size={13} /> Bağımsız proje
             </p>
-            <h2>Bi’ Plan’a destek ol.</h2>
+            <h2>Event Recommender’a destek ol.</h2>
             <p>
               Bu proje İstanbul’daki etkinlikleri daha kolay keşfedebilmek için
               bağımsız olarak geliştiriliyor.
@@ -825,7 +825,7 @@ export default function Home() {
       </main>
       <footer>
         <div className="brand">
-          bi’ plan<span>✳</span>
+          event recommender<span>✳</span>
         </div>
         <p>İstanbul’u yeniden keşfet.</p>
         <div className="footer-notes">
@@ -844,7 +844,7 @@ export default function Home() {
               </p>
               <p>
                 Her arama bağımsızdır. Önceki isteklerin yeni aramaya eklenmez.
-                Bi’ Plan sohbet geçmişi oluşturmaz. Onaylı test dönemlerinde,
+                Event Recommender sohbet geçmişi oluşturmaz. Onaylı test dönemlerinde,
                 sayfadaki bildirim açıkken, bağımsız aramalar değerlendirme için
                 kaydedilebilir.
                 İstek sınırlandırması için ham IP adresi yerine türetilmiş bir
@@ -855,7 +855,7 @@ export default function Home() {
                 Etkinlik afişleri bilet sağlayıcılarının veya görsel dağıtım
                 servislerinin adreslerinden yüklenebilir. Tarayıcın bu
                 görselleri getirirken ilgili üçüncü tarafla doğrudan bağlantı
-                kurar; Bi’ Plan sayfa adresini bu görsel istekleriyle göndermez.
+                kurar; Event Recommender sayfa adresini bu görsel istekleriyle göndermez.
               </p>
             </div>
           </details>

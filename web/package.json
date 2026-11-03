@@ -1,5 +1,5 @@
 {
-  "name": "biplan",
+  "name": "event-rec",
   "version": "0.1.0",
   "private": true,
   "engines": {
@@ -63,7 +63,7 @@
   },
   "type": "module",
   "imports": {
-    "#biplan/store": "./lib/store.node.ts"
+    "#event-rec/store": "./lib/store.node.ts"
   },
   "overrides": {
     "@google/adk": {

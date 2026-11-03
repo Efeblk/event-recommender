@@ -40,8 +40,8 @@ const intervalMs = Number(values['interval-ms']);
 if (!Number.isSafeInteger(intervalMs) || intervalMs < 0 || intervalMs > 60000)
   throw new Error('--interval-ms must be an integer from 0 through 60000.');
 
-const rawOrigin = values.origin ?? process.env.BIPLAN_URL;
-if (!rawOrigin) throw new Error('Set BIPLAN_URL or pass --origin.');
+const rawOrigin = values.origin ?? process.env.EVENT_REC_URL;
+if (!rawOrigin) throw new Error('Set EVENT_REC_URL or pass --origin.');
 const origin = new URL(rawOrigin);
 const loopback = ['localhost', '127.0.0.1', '[::1]'].includes(origin.hostname);
 const privateCloudRun =

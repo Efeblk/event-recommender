@@ -195,7 +195,7 @@ function labelFixture(events: EventRecord[]) {
   const control = new MemoryControl();
   const lease = { key: 'label_index_lock', token: 't', expiresAt: Date.now() + 300_000 };
   const config = { apiKey: 'test-key', model: 'jev-1.13.0' };
-  return { saved, store, control, lease, config, ledger: () => control.documents.get('biplan/staging/eventLabels/ledger') as Record<string, number | boolean> };
+  return { saved, store, control, lease, config, ledger: () => control.documents.get('event-rec/staging/eventLabels/ledger') as Record<string, number | boolean> };
 }
 
 await test('label batches reserve, settle and skip labeled documents', async () => {

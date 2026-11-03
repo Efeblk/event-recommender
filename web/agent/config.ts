@@ -18,7 +18,7 @@ const enabled = (value: string | undefined) =>
  * API key. Without either, the agent is unavailable and the route says so.
  */
 export function agentModelConfigFrom(env: AgentEnv): AgentModelConfig | null {
-  const model = env.BIPLAN_AGENT_MODEL?.trim() || DEFAULT_AGENT_MODEL;
+  const model = env.EVENT_REC_AGENT_MODEL?.trim() || DEFAULT_AGENT_MODEL;
   if (!/^[a-z0-9][a-z0-9.-]{1,80}$/.test(model))
     throw new Error('Invalid agent model configuration.');
   if (enabled(env.GOOGLE_GENAI_USE_VERTEXAI)) {

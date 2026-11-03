@@ -1,8 +1,7 @@
-# Bi' Plan architecture
+# Event Recommender architecture
 
 The [project plan](project-plan.md) defines the scope, sprints and acceptance
-checks. The [archived v1 product plan](archive/product-plan-v1.md) defined the
-search pipeline. PostgreSQL is outside the project.
+checks. PostgreSQL is outside the project.
 
 ## Target system (built in Sprints 1–4)
 
@@ -56,8 +55,8 @@ The shared identity code lives in `collector/identity/`. The GCP store uses it
 when publication prepares the search catalog. The collector's local checkpoint
 holds source records before that preparation.
 
-1. `.github/workflows/gcp-collector.yml` (old repository) restores the private catalog checkpoint
-   and the coverage backlog. It runs `collector/run.mjs` for Biletinial, Bubilet
+1. A scheduled collector job (not set up yet) restores the private catalog
+   checkpoint and the coverage backlog. It runs `collector/run.mjs` for Biletinial, Bubilet
    and Biletix. Each run has page, HTTP request and time limits. Later runs
    continue unfinished work.
 2. The collector validates source records. `collector/pipeline.mjs` reconciles
@@ -123,16 +122,15 @@ Every request starts a new plan. The page sends only the current message.
 - Missing vectors retain word matching. Provider failures use an explicit
   fallback. Unknown prices or policies do not satisfy a hard constraint.
 
-During an approved staging test (`BIPLAN_PREVIEW_TESTING=true`),
+During an approved staging test (`EVENT_REC_PREVIEW_TESTING=true`),
 `web/lib/request-log.ts` stores each search as one object under
-`biplan/staging/requestLog/<UTC day>/` in the collection bucket: the request,
+`event-rec/staging/requestLog/<UTC day>/` in the collection bucket: the request,
 the field reader's judgments, the plan and the returned
 event IDs. It stores no IP address or identifier. The page tells testers.
 These entries are the evaluation and training data for the request parser.
 
 Search consumes the prepared catalog. It does not collect provider pages or
-enrich the full catalog. Labeling runs in the collector workflow
-([GCP collection](https://github.com/Efeblk/event_recommender/blob/469b188e36c51df9a01b8f65bf83e2e99510698a/docs/gcp-collector.md#event-labeling-phase-1r-r4)).
+enrich the full catalog. Labeling runs in the collector workflow.
 The catalog remains searchable when the vector index is incomplete.
 Semantic coverage requires cached vectors for each current document.
 Optional Voyage indexing needs a separate approved budget and bounded window.
@@ -212,9 +210,6 @@ Artifact Registry stores container images.
 `/api/health` checks the application. `/api/ready` checks catalog and checkpoint
 readiness. A successful health check does not prove catalog readiness.
 
-GCP deployment runs from the old repository: [GCP deployment](https://github.com/Efeblk/event_recommender/blob/469b188e36c51df9a01b8f65bf83e2e99510698a/docs/gcp-deployment.md) and [GCP collection](https://github.com/Efeblk/event_recommender/blob/469b188e36c51df9a01b8f65bf83e2e99510698a/docs/gcp-collector.md).
-The [archive](https://github.com/Efeblk/event_recommender/tree/469b188e36c51df9a01b8f65bf83e2e99510698a/docs/archive) preserves earlier plans and evidence. Archived documents
-do not define current scope. Cloudflare runtime files and workflows are removed.
-The PostgreSQL code is not in this repository. Find it in
-[`Efeblk/event_recommender@469b188`](https://github.com/Efeblk/event_recommender/tree/469b188e36c51df9a01b8f65bf83e2e99510698a).
-The Node snapshot path is the v1 runtime.
+The GCP deployment files are `infra/gcp/` ([guide](../infra/gcp/README.md))
+and `.github/workflows/gcp-staging.yml`. Nothing is applied yet.
+The Node snapshot path is the only runtime.

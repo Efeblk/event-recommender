@@ -60,7 +60,7 @@ interface FileLike {
       resumable: false;
       validation: 'crc32c';
       preconditionOpts: { ifGenerationMatch: 0 };
-      metadata: { metadata: { biplanSha256: string } };
+      metadata: { metadata: { eventRecSha256: string } };
     },
   ): Promise<unknown>;
 }
@@ -133,11 +133,11 @@ export function gcpStorageConfigFromEnv(
   const environment = required(env, 'DEPLOYMENT_ENV');
   if (environment !== 'staging' && environment !== 'production')
     throw new Error('DEPLOYMENT_ENV must be staging or production.');
-  const projectId = required(env, 'BIPLAN_GCP_PROJECT');
+  const projectId = required(env, 'EVENT_REC_GCP_PROJECT');
   const bucket = required(env, 'GCP_STORAGE_BUCKET');
   const databaseId = env.FIRESTORE_DATABASE?.trim() || '(default)';
   if (!/^[a-z][a-z0-9-]{4,28}[a-z0-9]$/.test(projectId))
-    throw new Error('BIPLAN_GCP_PROJECT is invalid.');
+    throw new Error('EVENT_REC_GCP_PROJECT is invalid.');
   if (!/^[a-z0-9][a-z0-9._-]{1,220}[a-z0-9]$/.test(bucket))
     throw new Error('GCP_STORAGE_BUCKET is invalid.');
   if (!/^\(default\)$|^[a-z][a-z0-9-]{2,62}$/.test(databaseId))
@@ -347,7 +347,7 @@ export function createGcpStores(
           resumable: false,
           validation: 'crc32c',
           preconditionOpts: { ifGenerationMatch: 0 },
-          metadata: { metadata: { biplanSha256: digest } },
+          metadata: { metadata: { eventRecSha256: digest } },
         });
       } catch (error) {
         if (statusCode(error) !== 412) storageFailure();

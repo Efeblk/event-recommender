@@ -8,14 +8,14 @@ export default defineConfig({
   reporter: process.env.CI ? 'github' : 'line',
   use: {
     baseURL:
-      process.env.BIPLAN_BROWSER_ORIGIN ||
-      (process.env.BIPLAN_BROWSER_START === '1'
+      process.env.EVENT_REC_BROWSER_ORIGIN ||
+      (process.env.EVENT_REC_BROWSER_START === '1'
         ? 'http://127.0.0.1:4173'
         : 'http://127.0.0.1:3001'),
     screenshot: 'only-on-failure',
     trace: 'retain-on-failure',
   },
-  ...(process.env.BIPLAN_BROWSER_START === '1'
+  ...(process.env.EVENT_REC_BROWSER_START === '1'
     ? {
         webServer: {
           command: 'node scripts/browser-preview.mjs',

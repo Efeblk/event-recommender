@@ -1,5 +1,5 @@
 variable "project_id" {
-  description = "Existing, billing-linked project dedicated to Bi Plan staging. No project or billing association is created here."
+  description = "Existing, billing-linked project dedicated to Event Recommender staging. No project or billing association is created here."
   type        = string
   validation {
     condition     = can(regex("^[a-z][a-z0-9-]{4,28}[a-z0-9]$", var.project_id))
@@ -8,7 +8,7 @@ variable "project_id" {
 }
 
 variable "dedicated_billing_project_confirmed" {
-  description = "Set true only after you verify that this project is dedicated to Bi Plan staging and already has billing enabled."
+  description = "Set true only after you verify that this project is dedicated to Event Recommender staging and already has billing enabled."
   type        = bool
   default     = false
   validation {
@@ -28,7 +28,7 @@ variable "region" {
 }
 
 variable "collection_bucket_name" {
-  description = "Optional globally unique staging bucket name. Empty uses PROJECT_ID-biplan-staging-data."
+  description = "Optional globally unique staging bucket name. Empty uses PROJECT_ID-event-rec-staging-data."
   type        = string
   default     = ""
   validation {

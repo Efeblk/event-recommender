@@ -36,7 +36,7 @@ for (const path of [join(webRoot, '.env'), devVarsPath]) {
 const environment = {
   ...settings,
   ...process.env,
-  BIPLAN_RUNTIME: 'node',
+  EVENT_REC_RUNTIME: 'node',
   SYNC_TOKEN: token,
   HOST: '127.0.0.1',
   HOSTNAME: '127.0.0.1',

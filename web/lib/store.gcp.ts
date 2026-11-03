@@ -256,7 +256,7 @@ export function createGcpStore(options: {
   const namespace = options.namespace ?? 'default';
   if (!/^[A-Za-z0-9_-]{1,64}$/.test(namespace))
     throw new Error('Invalid storage namespace');
-  const base = `biplan/${namespace}`;
+  const base = `event-rec/${namespace}`;
   const catalogPath = `${base}/state/catalog`;
   const publicationPath = `${base}/state/checkpoint-publication`;
   // One catalog and one vector profile per instance; pointers are re-read on

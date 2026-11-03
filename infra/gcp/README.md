@@ -1,12 +1,11 @@
 # GCP staging infrastructure
 
-These Terraform files prepare the GCP side of Bi' Plan staging. They come
-from `Efeblk/event_recommender@469b188` (`infra/gcp/`). PostgreSQL and the
-collector identity are not included. The changes are:
+These Terraform files prepare the GCP side of Event Recommender staging.
+A collector identity is not included yet. The files set up:
 
-- GitHub trust is for this repository (`Efeblk/event-recommender`, ID
+- GitHub trust for this repository (`Efeblk/event-recommender`, ID
   `1439126446`).
-- There are two more secret names: the Gemini API key and the Google Maps key.
+- Secret names, including the Gemini API key and the Google Maps key.
 - A Firestore TTL policy on `agentSessions.expiresAt` deletes agent sessions
   after 7 days.
 - The Identity Toolkit API is on, for Firebase Auth.
@@ -17,12 +16,9 @@ The files create no project, billing link, Cloud Run service, secret value,
 service-account key or public endpoint. The deploy workflow
 (`.github/workflows/gcp-staging.yml`) owns the Cloud Run revisions.
 
-> **Do not apply these files to the existing staging project
-> (`biplan-stg-efeblk`) without a decision from the user.** That project is
-> managed from the old repository. A new apply with new state fails on
-> resources that already exist. An import moves GitHub trust from the old
-> repository to this one. The old collector then loses its identity, because
-> `collector.tf` is not here.
+> **Apply these files only to a new, dedicated staging project, and only
+> after a decision from the user.** A new apply fails on resources that
+> already exist in a project.
 
 ## Resources
 

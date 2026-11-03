@@ -2,14 +2,14 @@ mock_provider "google" {
   mock_data "google_project" {
     defaults = {
       number          = "123456789012"
-      project_id      = "biplan-offline-test"
+      project_id      = "event-rec-offline-test"
       billing_account = "ABCDEF-123456-ABCDEF"
     }
   }
 }
 
 variables {
-  project_id                          = "biplan-offline-test"
+  project_id                          = "event-rec-offline-test"
   dedicated_billing_project_confirmed = true
 }
 
@@ -87,7 +87,7 @@ run "try_budget" {
     budget_billing_account       = "ABCDEF-123456-ABCDEF"
     budget_currency_code         = "TRY"
     budget_amount                = 250
-    budget_notification_channels = ["projects/biplan-staging-test/notificationChannels/123"]
+    budget_notification_channels = ["projects/event-rec-staging-test/notificationChannels/123"]
   }
   assert {
     condition     = google_billing_budget.staging[0].amount[0].specified_amount[0].currency_code == "TRY" && google_billing_budget.staging[0].amount[0].specified_amount[0].units == "250"

@@ -871,6 +871,10 @@ footer small {
   }
 }
 @media (max-width: 420px) {
+  .brand {
+    font-size: 21px;
+    letter-spacing: -1.2px;
+  }
   .hero h1 {
     font-size: 41px;
   }

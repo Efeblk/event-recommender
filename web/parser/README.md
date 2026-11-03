@@ -32,13 +32,7 @@ older path. The field reader still shares `contract.ts`, `lexicon.ts` and
 `state.ts`. `state.ts` uses `semantics.ts`. The field reader also imports
 response and result types from `parse-core.ts`. These shared files are live
 dependencies and are not unused parser code. The product plan keeps removal of
-the older span-first path as a later task. The archived [span parser retrieval
-record](https://github.com/Efeblk/event_recommender/blob/469b188e36c51df9a01b8f65bf83e2e99510698a/docs/archive/span-parser-retrieval.md) preserves its original
-integration claims.
-
-The historical parser benchmarks (`parser/bench/`) stay in the
-[old repository](https://github.com/Efeblk/event_recommender/tree/469b188e36c51df9a01b8f65bf83e2e99510698a/web/parser/bench).
-They do not evaluate the current field reader.
+the older span-first path as a later task.
 
 Responses are cached by request hash in `.runtime/jev-cache/`; `--offline`
 replays without calls. `.runtime/jev-ledger.jsonl` records every paid call.

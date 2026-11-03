@@ -300,8 +300,8 @@ async function main() {
     await atomicJson(resolve(values.output), result);
     return;
   }
-  const { BIPLAN_URL: origin, SYNC_TOKEN: token } = process.env;
-  requireValue(origin && token, "Set BIPLAN_URL and SYNC_TOKEN in the runner secret store.");
+  const { EVENT_REC_URL: origin, SYNC_TOKEN: token } = process.env;
+  requireValue(origin && token, "Set EVENT_REC_URL and SYNC_TOKEN in the runner secret store.");
   if (values.mode === "preflight") {
     const plan = await json(values.plan);
     const result = await preflightReplay({ origin, token, expectedRevision: values["expected-revision"],

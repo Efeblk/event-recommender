@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "name": "biplan-input-intent-v1",
+  "name": "event-rec-input-intent-v1",
   "referenceDate": "2026-09-28",
   "timeZone": "Europe/Istanbul",
   "description": "Frozen Turkish/English conversational input interpretation cases. Expectations describe intent/state interpretation only, not event relevance or live catalog accuracy.",

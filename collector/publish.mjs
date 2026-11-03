@@ -199,8 +199,8 @@ export async function publishCheckpointOnly({ origin, token, report, reportSha25
 
 async function main() {
   const { values } = parseArgs({ options: { report: { type: "string" }, receipt: { type: "string" }, "imports-receipt": { type: "string" }, "imports-proof": { type: "string" }, checkpoint: { type: "boolean", default: false }, "checkpoint-only": { type: "boolean", default: false }, snapshot: { type: "string", default: "state/events.json" }, "allow-loopback-http": { type: "boolean", default: false }, "validate-imports": { type: "boolean", default: false }, "exact-checkpoint": { type: "boolean", default: false } } });
-  const { BIPLAN_URL: origin, SYNC_TOKEN: token } = process.env;
-  if (!origin || !token) throw new Error("Set BIPLAN_URL and SYNC_TOKEN in the runner secret store.");
+  const { EVENT_REC_URL: origin, SYNC_TOKEN: token } = process.env;
+  if (!origin || !token) throw new Error("Set EVENT_REC_URL and SYNC_TOKEN in the runner secret store.");
   endpointFor(origin, "/api/admin/import", values["allow-loopback-http"]);
   const reportPath = values.report ? resolve(values.report) : new URL("./output/report.json", import.meta.url);
   const reportBytes = await readFile(reportPath);

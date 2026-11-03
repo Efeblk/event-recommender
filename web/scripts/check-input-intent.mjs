@@ -237,9 +237,9 @@ async function runLive(fixtureValue, options) {
   const provenance = await buildProvenance(fixtureValue, model);
   let liveRequests = 0;
   let lastProviderStartedAt = 0;
-  let remainingInputTokens = process.env.BIPLAN_LIVE_REMAINING_INPUT_TOKENS === undefined
+  let remainingInputTokens = process.env.EVENT_REC_LIVE_REMAINING_INPUT_TOKENS === undefined
     ? Infinity
-    : Number(process.env.BIPLAN_LIVE_REMAINING_INPUT_TOKENS);
+    : Number(process.env.EVENT_REC_LIVE_REMAINING_INPUT_TOKENS);
   if (!(remainingInputTokens >= 64_000)) throw new Error('Insufficient interpretation token allowance; no provider request was made.');
 
   for (const testCase of selected) {

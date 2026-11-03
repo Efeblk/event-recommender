@@ -29,7 +29,7 @@ const TOOL_LABELS: Record<string, string> = {
   list_plans: 'Kayıtlı planlar okunuyor',
   save_favorite: 'Favorilere ekleniyor',
 };
-const SESSION_KEY = 'biplan.agent.session';
+const SESSION_KEY = 'event-rec.agent.session';
 const MAX_MESSAGE_CHARS = 1000;
 
 function newSessionId() {
@@ -156,8 +156,8 @@ export default function PlanPage() {
   return (
     <div className="site-shell">
       <header className="site-header">
-        <Link href="/" className="brand" aria-label="Bi’ Plan ana sayfa">
-          bi’ plan<span>✳</span>
+        <Link href="/" className="brand" aria-label="Event Recommender ana sayfa">
+          event recommender<span>✳</span>
         </Link>
         <nav aria-label="Ana menü">
           <Link href="/">Etkinlikler</Link>

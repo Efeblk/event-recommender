@@ -318,7 +318,7 @@ void test('scoreCase and summarize handle decline cases, discardedClearRequests,
 });
 
 void test('PlanEvalTransport caches live responses as base64 and replays them offline without network calls', async () => {
-  const dir = await mkdtemp(join(tmpdir(), 'biplan-plan-eval-'));
+  const dir = await mkdtemp(join(tmpdir(), 'event-rec-plan-eval-'));
   try {
     const cacheDir = join(dir, 'cache');
     const ledgerPath = join(dir, 'budget-ledger.jsonl');
@@ -385,7 +385,7 @@ void test('PlanEvalTransport caches live responses as base64 and replays them of
 });
 
 void test('offline cache miss records case error "cache miss" and is never counted as a pass even on decline cases', async () => {
-  const dir = await mkdtemp(join(tmpdir(), 'biplan-plan-eval-miss-'));
+  const dir = await mkdtemp(join(tmpdir(), 'event-rec-plan-eval-miss-'));
   try {
     const fixture: HardFixture = {
       schemaVersion: 1,

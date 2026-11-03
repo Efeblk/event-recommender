@@ -29,13 +29,13 @@ async function main() {
   };
   let failure = null;
   try {
-    if (!process.env.BIPLAN_URL) throw new Error("biplan_url_missing");
-    const health = await requestJson(endpointFor(process.env.BIPLAN_URL, "/api/health", values["allow-loopback-http"]), { timeout: 15_000 });
+    if (!process.env.EVENT_REC_URL) throw new Error("event_rec_url_missing");
+    const health = await requestJson(endpointFor(process.env.EVENT_REC_URL, "/api/health", values["allow-loopback-http"]), { timeout: 15_000 });
     if (!health.response.ok || health.result?.status !== "ok") throw new Error(`health_http_${health.response.status}`);
     if (health.result?.deployment?.environment !== values.environment) throw new Error("health_environment_mismatch");
     if (!/^[0-9a-f]{40}$/.test(health.result?.deployment?.revision ?? "")) throw new Error("health_revision_invalid");
     evidence.revision = health.result.deployment.revision;
-    await checkReady({ origin: process.env.BIPLAN_URL, allowLoopbackHttp: values["allow-loopback-http"] });
+    await checkReady({ origin: process.env.EVENT_REC_URL, allowLoopbackHttp: values["allow-loopback-http"] });
     evidence.ready = true;
   } catch (error) {
     failure = error instanceof Error ? error.message.replace(/[^a-zA-Z0-9_:., -]/g, "?").slice(0, 160) : "monitor_failed";

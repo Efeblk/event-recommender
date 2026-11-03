@@ -125,7 +125,7 @@ export function validateDiagnostics(results, expectedRevision) {
 async function main() {
   const { values } = parseArgs({ options: { output: { type: "string" }, "expected-revision": { type: "string" }, "allow-loopback-http": { type: "boolean", default: false } } });
   if (!/^[0-9a-f]{40}$/.test(values["expected-revision"] ?? "")) throw new Error("Expected revision is invalid.");
-  const { BIPLAN_URL: origin, SYNC_TOKEN: token, SERVERLESS_ID_TOKEN: serverlessToken } = process.env;
+  const { EVENT_REC_URL: origin, SYNC_TOKEN: token, SERVERLESS_ID_TOKEN: serverlessToken } = process.env;
   if (!origin || !token || !serverlessToken || !values.output) throw new Error("Diagnostic destination, credentials, and output are required.");
   const results = {};
   for (const [kind, pathname] of [["health", "/api/health"], ["ready", "/api/ready"], ["canonical", "/api/admin/collection"], ["publication", "/api/admin/collection?publication=latest"]]) {

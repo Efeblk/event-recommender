@@ -18,9 +18,9 @@ const cwd = resolve('dist-node');
 const packagedRequire = createRequire(resolve(cwd, 'package.json'));
 const { Firestore } = packagedRequire('@google-cloud/firestore');
 const { Storage } = packagedRequire('@google-cloud/storage');
-const firestore = new Firestore({ projectId: 'biplan-offline-smoke' });
-assert.equal(firestore.doc('biplan/staging').path, 'biplan/staging');
-assert.equal(new Storage({ projectId: 'biplan-offline-smoke' }).bucket('biplan-offline-staging').file('fixture.json').name, 'fixture.json');
+const firestore = new Firestore({ projectId: 'event-rec-offline-smoke' });
+assert.equal(firestore.doc('event-rec/staging').path, 'event-rec/staging');
+assert.equal(new Storage({ projectId: 'event-rec-offline-smoke' }).bucket('event-rec-offline-staging').file('fixture.json').name, 'fixture.json');
 await firestore.terminate();
 const child = spawn(process.execPath, ['server.js'], {
   cwd,
@@ -34,7 +34,7 @@ const child = spawn(process.execPath, ['server.js'], {
     DEPLOYMENT_ENV: 'staging',
     DEPLOYMENT_SHA: 'node-smoke',
     SYNC_TOKEN: 'isolated-node-smoke-token',
-    BIPLAN_CLIENT_IP_MODE: 'shared',
+    EVENT_REC_CLIENT_IP_MODE: 'shared',
   },
   stdio: ['ignore', 'pipe', 'pipe'],
 });
@@ -68,7 +68,7 @@ try {
   assert.ok(ready, 'Node server did not start');
   const home = await fetch(origin);
   assert.equal(home.status, 200);
-  assert.match(await home.text(), /Bi.{0,10}Plan/);
+  assert.match(await home.text(), /Event Recommender/);
   assert.deepEqual(await (await fetch(`${origin}/api/site`)).json(), {
     donationUrl: null,
     requestLog: false,

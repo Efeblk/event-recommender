@@ -215,7 +215,7 @@ const item: GoldenCase = {
   expected: plan,
 };
 void test('scored vector loading requires complete coverage; diagnostic loading records missing vectors', async () => {
-  const directory = await mkdtemp(join(tmpdir(), 'biplan-golden-vectors-'));
+  const directory = await mkdtemp(join(tmpdir(), 'event-rec-golden-vectors-'));
   try {
     const path = join(directory, 'vectors.json');
     const envelope = {
@@ -259,7 +259,7 @@ void test('40 reviewable requests retain language counts and independent hard pl
   const broken = structuredClone(fixture);
   Object.assign(broken.cases[0], { previousCaseId: 'en15' });
   assert.throws(() => validateGoldenFixture(broken), /independent/);
-  const directory = await mkdtemp(join(tmpdir(), 'biplan-golden-review-'));
+  const directory = await mkdtemp(join(tmpdir(), 'event-rec-golden-review-'));
   try {
     const path = join(directory, 'fixture.json');
     await writeFile(
@@ -276,7 +276,7 @@ void test('40 reviewable requests retain language counts and independent hard pl
 });
 
 void test('a full production parser/retrieval/Jev replay uses three cached transports and zero repeat calls', async () => {
-  const directory = await mkdtemp(join(tmpdir(), 'biplan-golden-'));
+  const directory = await mkdtemp(join(tmpdir(), 'event-rec-golden-'));
   try {
     let calls = 0;
     const vector = Array.from({ length: 1024 }, (_, i) => (i === 0 ? 1 : 0));
@@ -396,7 +396,7 @@ void test('a full production parser/retrieval/Jev replay uses three cached trans
 });
 
 void test('cache identity includes request text, reference clock, catalog hash and exact provider body', async () => {
-  const directory = await mkdtemp(join(tmpdir(), 'biplan-golden-key-'));
+  const directory = await mkdtemp(join(tmpdir(), 'event-rec-golden-key-'));
   try {
     const request = {
       method: 'POST',
@@ -445,7 +445,7 @@ void test('cache identity includes request text, reference clock, catalog hash a
 });
 
 void test('failed calls retain reservations and never retry, including a new process', async () => {
-  const directory = await mkdtemp(join(tmpdir(), 'biplan-golden-failed-'));
+  const directory = await mkdtemp(join(tmpdir(), 'event-rec-golden-failed-'));
   try {
     let calls = 0;
     const options = {
@@ -520,7 +520,7 @@ void test('failed calls retain reservations and never retry, including a new pro
 });
 
 void test('transport failures retain only sanitized diagnostics and stop live row pacing', async () => {
-  const directory = await mkdtemp(join(tmpdir(), 'biplan-golden-network-'));
+  const directory = await mkdtemp(join(tmpdir(), 'event-rec-golden-network-'));
   try {
     const providerSecret = 'provider response must not be retained';
     const headerSecret = 'Bearer secret-key';
@@ -596,7 +596,7 @@ void test('transport failures retain only sanitized diagnostics and stop live ro
 });
 
 void test('Voyage reservations use the exact query UTF-8 byte envelope and settle before the next call', async () => {
-  const directory = await mkdtemp(join(tmpdir(), 'biplan-golden-voyage-cap-'));
+  const directory = await mkdtemp(join(tmpdir(), 'event-rec-golden-voyage-cap-'));
   try {
     const inputs = ['a'.repeat(100), 'é'.repeat(100)];
     let calls = 0;
@@ -651,7 +651,7 @@ void test('Voyage reservations use the exact query UTF-8 byte envelope and settl
 });
 
 void test('golden document mode is explicit, bounded, cached and held to the $0.01 cap', async () => {
-  const directory = await mkdtemp(join(tmpdir(), 'biplan-golden-documents-'));
+  const directory = await mkdtemp(join(tmpdir(), 'event-rec-golden-documents-'));
   try {
     const documentRequest = (input: string[]) => ({
       method: 'POST',
@@ -730,7 +730,7 @@ void test('golden document mode is explicit, bounded, cached and held to the $0.
 });
 
 void test('budget refusal and offline misses happen before any network attempt', async () => {
-  const directory = await mkdtemp(join(tmpdir(), 'biplan-golden-cap-'));
+  const directory = await mkdtemp(join(tmpdir(), 'event-rec-golden-cap-'));
   try {
     let calls = 0;
     const options = {

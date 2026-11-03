@@ -1,6 +1,6 @@
 locals {
-  prefix             = "biplan-staging"
-  collection_bucket  = var.collection_bucket_name != "" ? var.collection_bucket_name : "${var.project_id}-biplan-staging-data"
+  prefix             = "event-rec-staging"
+  collection_bucket  = var.collection_bucket_name != "" ? var.collection_bucket_name : "${var.project_id}-event-rec-staging-data"
   github_environment = "gcp-staging"
   github_ref         = "refs/heads/${var.github_allowed_branch}"
   # Secret names only. Terraform never creates or reads secret values.
@@ -88,7 +88,7 @@ resource "google_storage_bucket" "collection" {
   uniform_bucket_level_access = true
   public_access_prevention    = "enforced"
   force_destroy               = false
-  labels                      = { application = "biplan", environment = "staging" }
+  labels                      = { application = "event-rec", environment = "staging" }
   soft_delete_policy { retention_duration_seconds = 604800 }
   depends_on = [google_project_service.required]
 
@@ -101,7 +101,7 @@ resource "google_artifact_registry_repository" "images" {
   project                = var.project_id
   location               = var.region
   repository_id          = local.prefix
-  description            = "Bi Plan staging container images"
+  description            = "Event Recommender staging container images"
   format                 = "DOCKER"
   cleanup_policy_dry_run = false
   cleanup_policies {
@@ -127,7 +127,7 @@ resource "google_secret_manager_secret" "application" {
   replication {
     auto {}
   }
-  labels     = { application = "biplan", environment = "staging" }
+  labels     = { application = "event-rec", environment = "staging" }
   depends_on = [google_project_service.required]
   lifecycle { prevent_destroy = true }
 }

@@ -29,7 +29,7 @@ export function planToIcs(plan: SavedPlan, now = new Date()) {
   const lines = [
     'BEGIN:VCALENDAR',
     'VERSION:2.0',
-    "PRODID:-//Bi' Plan//Outing planner//TR",
+    "PRODID:-//Event Recommender//Outing planner//TR",
     'CALSCALE:GREGORIAN',
     'METHOD:PUBLISH',
     `X-WR-CALNAME:${text(plan.title)}`,
@@ -39,7 +39,7 @@ export function planToIcs(plan: SavedPlan, now = new Date()) {
     const end = new Date(start.getTime() + DEFAULT_MINUTES * 60_000);
     lines.push(
       'BEGIN:VEVENT',
-      `UID:${plan.id}-${item.eventId}@biplan`,
+      `UID:${plan.id}-${item.eventId}@event-rec`,
       `DTSTAMP:${stamp(now.toISOString())}`,
       `DTSTART:${stamp(start.toISOString())}`,
       `DTEND:${stamp(end.toISOString())}`,

@@ -98,33 +98,33 @@ await test('unattended indexing defaults off and validates enabled windows befor
   const report = await reportPath();
   const off = await cli(['--live'], {
     GCP_STAGING_INDEXING_ENABLED: '',
-    BIPLAN_URL: 'invalid',
+    EVENT_REC_URL: 'invalid',
   });
   assert.equal(off.code, 0);
   assert.match(off.stdout, /disabled; no requests/);
   const recorded = await cli(['--live', '--report', report], {
     GCP_STAGING_INDEXING_ENABLED: '',
-    BIPLAN_URL: 'invalid',
+    EVENT_REC_URL: 'invalid',
     SYNC_TOKEN: '',
     SERVERLESS_ID_TOKEN: '',
   });
   assert.equal(recorded.code, 0);
   assert.equal(JSON.parse(await readFile(report, 'utf8')).outcome, 'disabled');
   const bad = await cli(['--live'], {
-    BIPLAN_URL: 'https://fixture.run.app',
+    EVENT_REC_URL: 'https://fixture.run.app',
     GCP_STAGING_INDEXING_MAX_CALLS: '401',
   });
   assert.notEqual(bad.code, 0);
   assert.match(bad.stderr, /Invalid or expired indexing window/);
   const plan = await cli([], {
-    BIPLAN_URL: 'https://fixture.run.app',
+    EVENT_REC_URL: 'https://fixture.run.app',
     SYNC_TOKEN: '',
     SERVERLESS_ID_TOKEN: '',
   });
   assert.equal(plan.code, 0);
   assert.equal(JSON.parse(plan.stdout).requests, 0);
   const daily = await cli([], {
-    BIPLAN_URL: 'https://fixture.run.app',
+    EVENT_REC_URL: 'https://fixture.run.app',
     GCP_STAGING_INDEXING_FROM: '',
     GCP_STAGING_INDEXING_UNTIL: 'open',
     GCP_STAGING_INDEXING_MAX_CALLS: '96',
@@ -157,7 +157,7 @@ await test('fully cached catalog makes one activation POST without provider usag
     async (origin, requests) => {
       const result = await cli(
         ['--live', '--allow-loopback-http', '--report', report],
-        { BIPLAN_URL: origin },
+        { EVENT_REC_URL: origin },
       );
       assert.equal(result.code, 0, result.stderr);
       assert.deepEqual(
@@ -187,7 +187,7 @@ await test('an older deployed endpoint without audited pin metadata never receiv
   await endpoint([{ body: older }], async (origin, requests) => {
     const result = await cli(
       ['--live', '--allow-loopback-http', '--report', report],
-      { BIPLAN_URL: origin },
+      { EVENT_REC_URL: origin },
     );
     assert.equal(result.code, 1);
     assert.deepEqual(
@@ -204,7 +204,7 @@ await test('failed POST original HTTP evidence is retained and never retried', a
     async (origin, requests) => {
       const result = await cli(
         ['--live', '--allow-loopback-http', '--report', report],
-        { BIPLAN_URL: origin },
+        { EVENT_REC_URL: origin },
       );
       assert.equal(result.code, 1);
       assert.deepEqual(
@@ -246,7 +246,7 @@ await test('bounded-stop remains visible rather than treating collection as full
     async (origin, requests) => {
       const result = await cli(
         ['--live', '--allow-loopback-http', '--report', report],
-        { BIPLAN_URL: origin },
+        { EVENT_REC_URL: origin },
       );
       assert.equal(result.code, 2);
       assert.equal(requests.length, 2);
@@ -263,7 +263,7 @@ await test('escaped reflected credentials are suppressed even when configured to
   await endpoint([{ status: 503, raw }], async (origin, requests) => {
     const result = await cli(
       ['--live', '--allow-loopback-http', '--report', report],
-      { BIPLAN_URL: origin, SYNC_TOKEN: '  offline-sync  ' },
+      { EVENT_REC_URL: origin, SYNC_TOKEN: '  offline-sync  ' },
     );
     assert.equal(result.code, 1);
     assert.equal(requests.length, 1);

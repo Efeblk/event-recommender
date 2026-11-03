@@ -74,11 +74,11 @@ await test('agent model configuration needs Vertex AI settings or a Gemini key',
     agentModelConfigFrom({
       GOOGLE_GENAI_USE_VERTEXAI: 'true',
       GOOGLE_CLOUD_PROJECT: 'p',
-      BIPLAN_AGENT_MODEL: 'gemini-x',
+      EVENT_REC_AGENT_MODEL: 'gemini-x',
     }),
     { model: 'gemini-x', vertexai: true, project: 'p', location: 'us-central1' },
   );
-  assert.throws(() => agentModelConfigFrom({ BIPLAN_AGENT_MODEL: 'bad model/../x' }));
+  assert.throws(() => agentModelConfigFrom({ EVENT_REC_AGENT_MODEL: 'bad model/../x' }));
 });
 
 await test('agent turns accept only a bounded message and a client session ID', () => {

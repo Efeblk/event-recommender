@@ -1,8 +1,12 @@
-# Bi' Plan
+# Event Recommender
 
-Bi' Plan is a Google ADK agent that plans Istanbul outings from Turkish and
-English requests. It finds correct, bookable events, plans the route between
+Event Recommender is a Google ADK agent that plans Istanbul outings from
+Turkish and English requests. It finds correct, bookable events, plans the route between
 venues and saves plans for the user.
+It is the group project for the course JOB191 - Dream Data Labs Solutions AI
+Augmented Software Engineering (1).
+New teammates start with [the onboarding guide](docs/onboarding.md) and
+[CONTRIBUTING.md](CONTRIBUTING.md).
 Use [the project plan](docs/project-plan.md) for scope, sprints and acceptance checks.
 Use [the architecture](docs/architecture.md) for the target system and the current data flow.
 
@@ -13,16 +17,7 @@ The application runs on Node in GCP Cloud Run.
 Firestore holds catalog pointers, leases and request limits.
 Private Cloud Storage holds catalog checkpoints and cached vectors.
 The collector supports Biletinial, Bubilet and Biletix.
-PostgreSQL is outside v1. Its code stays in the old repository (see below).
-
-## Repository history
-
-This repository continues
-[Efeblk/event_recommender](https://github.com/Efeblk/event_recommender)
-from commit `469b188`. It holds only the code that v1 uses.
-The old repository keeps the full history, the old PRs and the archived evidence.
-GCP deployment is not in this repository yet: no workflows, Terraform or runbooks.
-GCP staging still deploys and collects from the old repository.
+PostgreSQL is outside the project.
 
 ## Install
 
@@ -88,7 +83,7 @@ Configure Gemini with one of these:
   `GOOGLE_CLOUD_LOCATION` (default `us-central1`) for Vertex AI with
   Application Default Credentials.
 
-`BIPLAN_AGENT_MODEL` selects the model (default `gemini-2.5-flash`). Without
+`EVENT_REC_AGENT_MODEL` selects the model (default `gemini-2.5-flash`). Without
 Gemini settings, `/api/agent` returns 503 with code `agent_unavailable`.
 Each turn has a 60 s limit and at most 8 model calls. The route uses the same
 body limit, visitor rate limit, daily AI limit and catalog check as search.
@@ -100,7 +95,7 @@ Other settings. Each feature turns off safely when its setting is missing:
   Google and guest sign-in. Without them, the UI hides sign-in. The server
   checks Firebase ID tokens (RS256, Google certificates) and sets per-user
   limits of 6 turns per minute and 60 per hour.
-- `GCP_STORAGE_BUCKET` and `BIPLAN_GCP_PROJECT`: Firestore for saved data and
+- `GCP_STORAGE_BUCKET` and `EVENT_REC_GCP_PROJECT`: Firestore for saved data and
   agent sessions. Without them, both stay in process memory.
   `DEPLOYMENT_ENV` sets the namespace (`envs/{env}/...`).
 
@@ -145,11 +140,10 @@ Failed pages keep their original check times.
 Collection does not call TypeSafe. Optional Voyage indexing has a separate budget.
 
 Use [the collector guide](collector/README.md).
-Scheduled collection runs in the old repository
-([GCP collector runbook](https://github.com/Efeblk/event_recommender/blob/469b188e36c51df9a01b8f65bf83e2e99510698a/docs/gcp-collector.md)).
-That workflow imports verified records, publishes a complete checkpoint
-and reads it back. Raw provider pages are excluded from workflow artifacts.
-Small JSON reports remain available.
+A scheduled collector job is not set up yet (see the Later list in the
+project plan). A scheduled job must import verified records, publish a
+complete checkpoint and read it back. Raw provider pages stay out of
+workflow artifacts.
 
 ## Verification
 
@@ -182,8 +176,8 @@ npm run eval:agent -- --fixture work/agent-eval/live.json
 Record mode never retries a failed call and stops before a case that could
 exceed the budget.
 
-After the build, use `BIPLAN_BROWSER_START=1 npm run test:browser`.
-In PowerShell, set `$env:BIPLAN_BROWSER_START = '1'` first.
+After the build, use `EVENT_REC_BROWSER_START=1 npm run test:browser`.
+In PowerShell, set `$env:EVENT_REC_BROWSER_START = '1'` first.
 The browser suite uses mocked API responses and has no cloud or AI credentials.
 Run `npm test` in `collector/` for collector changes.
 CI also builds the Linux Docker image and smokes it without credentials
@@ -205,14 +199,7 @@ This repository has the staging deployment files:
   to a private Cloud Run service, through the protected `gcp-staging`
   environment.
 
-Nothing is applied yet. Until the user moves staging to these files, staging
-deploys from the old repository
-([GCP deployment runbook](https://github.com/Efeblk/event_recommender/blob/469b188e36c51df9a01b8f65bf83e2e99510698a/docs/gcp-deployment.md)).
-The collector workflow also stays there.
+Nothing is applied yet. Staging needs a new GCP project and a user decision.
 Staging is private. The product plan permits staging deploys and gate approval.
 Public access and new paid resources need user approval.
 `/api/health` checks the application. `/api/ready` checks catalog readiness.
-
-[Archived documents](https://github.com/Efeblk/event_recommender/tree/469b188e36c51df9a01b8f65bf83e2e99510698a/docs/archive) preserve earlier plans and evidence.
-The [legacy README](https://github.com/Efeblk/event_recommender/blob/469b188e36c51df9a01b8f65bf83e2e99510698a/docs/archive/legacy-readme.md) describes the old Python application.
-The old Python and dashboard code do not run the v1 application.

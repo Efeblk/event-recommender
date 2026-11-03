@@ -30,7 +30,7 @@ void test('live evaluator caps actual provider rounds and records both audited c
   const preload = join(temporary, 'mock-fetch.mjs');
   await writeFile(preload, `
 import { appendFile } from 'node:fs/promises';
-const log = process.env.BIPLAN_TEST_FETCH_LOG;
+const log = process.env.EVENT_REC_TEST_FETCH_LOG;
 globalThis.fetch = async (_url, init) => {
   await appendFile(log, 'call\\n');
   const request = JSON.parse(String(init.body));
@@ -44,8 +44,8 @@ globalThis.fetch = async (_url, init) => {
       probabilities: Object.fromEntries(options.map((option) => [option, option === choice ? 1 : 0])) }];
   }));
   return new Response(JSON.stringify({ model: request.model, answers,
-    usage: { input_tokens: Number(process.env.BIPLAN_TEST_INPUT_TOKENS ?? 1), output_tokens: 1 } }), {
-    status: Number(process.env.BIPLAN_TEST_FETCH_STATUS ?? 200),
+    usage: { input_tokens: Number(process.env.EVENT_REC_TEST_INPUT_TOKENS ?? 1), output_tokens: 1 } }), {
+    status: Number(process.env.EVENT_REC_TEST_FETCH_STATUS ?? 200),
     headers: { 'Content-Type': 'application/json' },
   });
 };
@@ -76,10 +76,10 @@ globalThis.fetch = async (_url, init) => {
         env: {
           ...process.env,
           TYPESAFE_API_KEY: 'test-only',
-          BIPLAN_LIVE_REMAINING_INPUT_TOKENS: String(options.tokens ?? 128000),
-          BIPLAN_TEST_FETCH_LOG: log,
-          BIPLAN_TEST_FETCH_STATUS: String(options.status ?? 200),
-          BIPLAN_TEST_INPUT_TOKENS: String(options.status === 429 ? 0 : 1),
+          EVENT_REC_LIVE_REMAINING_INPUT_TOKENS: String(options.tokens ?? 128000),
+          EVENT_REC_TEST_FETCH_LOG: log,
+          EVENT_REC_TEST_FETCH_STATUS: String(options.status ?? 200),
+          EVENT_REC_TEST_INPUT_TOKENS: String(options.status === 429 ? 0 : 1),
         },
       });
     } catch (error) {

@@ -595,7 +595,7 @@ test.describe('browser contracts', () => {
     await textarea.fill('Tiyatro bul');
     await textarea.press('Enter');
     await expect.poll(() => call).toBe(2);
-    await page.getByRole('link', { name: 'Bi’ Plan ana sayfa' }).click();
+    await page.getByRole('link', { name: 'Event Recommender ana sayfa' }).click();
     releasePending();
     await expect(
       page.getByRole('heading', { name: 'Şehirde ne var?' }),

@@ -1,9 +1,9 @@
-# Bi' Plan collector
+# Event Recommender collector
 
 The collector fetches public Istanbul listings from Biletinial, Bubilet and Biletix.
 It runs separately from the Node HTTP service. It does not call TypeSafe.
 Use [the project plan](../docs/project-plan.md) for scope.
-Scheduled operations run in the old repository ([GCP collector runbook](https://github.com/Efeblk/event_recommender/blob/469b188e36c51df9a01b8f65bf83e2e99510698a/docs/gcp-collector.md)).
+A scheduled collector job is not set up yet (see the Later list in the project plan).
 
 ## Run locally
 
@@ -39,8 +39,7 @@ Unknown availability and unknown prices remain explicit.
 `state/events.json` is the workflow's local checkpoint.
 Raw provider pages stay in ignored local storage or an explicitly configured private mirror.
 The workflow excludes `state/raw/` from public artifacts. It keeps JSON reports.
-PostgreSQL preparation is outside v1. Its code (`db/`, `jobs/` and `preparation/`)
-stays in [`Efeblk/event_recommender@469b188`](https://github.com/Efeblk/event_recommender/tree/469b188e36c51df9a01b8f65bf83e2e99510698a/collector).
+PostgreSQL preparation is outside the project.
 
 ## Import and checkpoint
 
@@ -52,7 +51,7 @@ npm run checkpoint:restore -- --output state/events.json --fallback ../web/data/
 npm run publish -- --checkpoint --snapshot state/events.json
 ```
 
-Remote use requires `BIPLAN_URL` and the application's `SYNC_TOKEN`.
+Remote use requires `EVENT_REC_URL` and the application's `SYNC_TOKEN`.
 Private Cloud Run also requires its HTTP identity token.
 The workflow sets those credentials securely. Never print or commit them.
 
@@ -74,5 +73,3 @@ npm test
 ```
 
 Tests use saved fixtures. They do not fetch providers or make paid calls.
-[Historical collector instructions](https://github.com/Efeblk/event_recommender/blob/bad42d030850e92bfb4e3cdc2f3dc92dcde155ca/collector/README.md)
-describe the removed Cloudflare workflow. Saved reports retain their original results.

@@ -7,12 +7,12 @@ export const metadata: Metadata = {
     (env as unknown as { SITE_URL?: string }).SITE_URL ||
       'http://localhost:3001',
   ),
-  title: 'Bi’ Plan — İstanbul’da sana göre bir şey var',
+  title: 'Event Recommender — İstanbul’da sana göre bir şey var',
   icons: { icon: '/favicon.svg' },
   description:
     'Ne yapmak istediğini anlat. İstanbul’daki gerçek etkinlikler arasından sana uygun bir plan bul.',
   openGraph: {
-    title: 'Bi’ Plan',
+    title: 'Event Recommender',
     description: 'İstanbul’da sana göre bir şey var.',
     locale: 'tr_TR',
     type: 'website',
@@ -21,7 +21,7 @@ export const metadata: Metadata = {
   twitter: {
     card: 'summary_large_image',
     images: ['/og.png'],
-    title: 'Bi’ Plan',
+    title: 'Event Recommender',
     description: 'İstanbul’da sana göre bir şey var.',
   },
 };
