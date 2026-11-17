@@ -40,7 +40,8 @@ Sprint 4).
 
 ## Work rules
 
-- One task, one branch, one PR from `master`. PRs need no review.
+- One task, one branch, one PR from `master`. Do not review PRs: no
+  approvals, no review agents, no delegate reviews.
   Squash-merge when CI is green. CI runs on pull requests only, to save
   Actions minutes.
 - Answer questions about the project from the documents and the code.
@@ -55,7 +56,7 @@ Sprint 4).
 - Use short sentences and active voice. Follow ASD-STE100 Simplified Technical English.
 - Keep technical names, commands, paths and quoted source text exact.
 - Use `gpt-6-astra` for substantial planning and difficult reasoning.
-- Use `gpt-5.6-sol` for implementation, tests and routine reviews.
+- Use `gpt-5.6-sol` for implementation and tests.
 - Handle trivial edits directly. Reuse existing findings.
 
 ## Verification
