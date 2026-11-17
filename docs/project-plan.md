@@ -214,3 +214,9 @@ production URL.
   Google libraries) and `minimatch` (collector, inside Crawlee): each fix
   needs a major upgrade upstream. The hydration browser test now holds
   `/_next/static/` chunks, because vinext 1.4 renamed them.
+- 2026-11-17: Scope change by the user: course scope only, solo project.
+  Goal: full marks, not a public product. Deploy to Vercel so the
+  instructors can try the app; GCP staging becomes optional. Event
+  collection stays manual (no scheduled scraping existed in GitHub Actions
+  or `infra/gcp/`). PRs need no review, and CI runs on pull requests only.
+  `AGENTS.md` "Course scope" overrides this plan where they disagree.
