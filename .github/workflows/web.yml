@@ -1,7 +1,7 @@
 name: Event Recommender
+# Pull requests only, to save Actions minutes. Squash merges reuse the
+# tested PR result, so a second run on master adds nothing.
 on:
-  push:
-    branches: [master]
   pull_request:
     branches: [master]
   # Manual runs also test Windows.

@@ -3,14 +3,31 @@
 Read [the project plan](docs/project-plan.md) first.
 The project plan has priority over all other documents.
 Use [the architecture](docs/architecture.md) for the current system.
+The "Course scope" section below overrides the project plan where they
+disagree (solo work, deployment target, public access, collection schedule,
+Sprint 4).
+
+## Course scope
+
+- The goal is full marks in the course, not a production product.
+- This is a solo project. There is no team. Ignore team roles, role owners
+  and teammate reviews in the project plan and other documents.
+- Do only the work the "Group Project Guidelines" ask for. Skip
+  production hardening, scale work and polish that the course does not grade.
+- Deploy the web app to Vercel so that the instructors can try it.
+  This replaces the GCP staging deployment for the course demo.
+- Run event collection manually only. Do not add scheduled scraping
+  (GitHub Actions `schedule`, Cloud Scheduler or Vercel Cron).
+- Keep the Vercel demo cheap: free tiers, small budgets, rate limits on
+  `/api/agent`.
 
 ## Product scope
 
 - Event Recommender is a Google ADK agent that plans Istanbul outings.
 - The course is JOB191 - Dream Data Labs Solutions AI Augmented Software
   Engineering (1). Its "Group Project Guidelines" set the scope: an ADK
-  agent with at least two tools, a UI, stored data, guardrails and a GCP
-  deployment.
+  agent with at least two tools, a UI, stored data, guardrails and a
+  deployment that the instructors can use (Vercel).
 - Build features F1–F4 from the project plan. F5 is a stretch goal.
 - Support Turkish and English requests.
 - Keep dates, places, budgets, categories, negations and age limits correct.
@@ -21,17 +38,14 @@ Use [the architecture](docs/architecture.md) for the current system.
 - Keep collection work outside agent requests.
 - Leave PostgreSQL, new providers and promotions outside the project.
 
-## Explain the project to teammates
-
-- When a teammate asks about the project, read [the onboarding guide](docs/onboarding.md) first.
-- Answer from the documents and the code. Give file paths.
-- If a document and the code disagree, say so. The project plan wins.
-- Explain the rules in the onboarding guide section 3 before a teammate's first change.
-- Point teammates to [CONTRIBUTING.md](CONTRIBUTING.md) for branches, PRs and checks.
-
 ## Work rules
 
-- One task, one branch, one PR from `master`. A teammate reviews each PR.
+- One task, one branch, one PR from `master`. Do not review PRs: no
+  approvals, no review agents, no delegate reviews.
+  Squash-merge when CI is green. CI runs on pull requests only, to save
+  Actions minutes.
+- Answer questions about the project from the documents and the code.
+  Give file paths. If a document and the code disagree, say so.
 - Delete the branch after merge. Do not create extra worktrees.
 - Complete each sprint when its acceptance checks pass.
 - Put unrelated issues in the project plan's Later list.
@@ -42,7 +56,7 @@ Use [the architecture](docs/architecture.md) for the current system.
 - Use short sentences and active voice. Follow ASD-STE100 Simplified Technical English.
 - Keep technical names, commands, paths and quoted source text exact.
 - Use `gpt-6-astra` for substantial planning and difficult reasoning.
-- Use `gpt-5.6-sol` for implementation, tests and routine reviews.
+- Use `gpt-5.6-sol` for implementation and tests.
 - Handle trivial edits directly. Reuse existing findings.
 
 ## Verification
@@ -65,8 +79,9 @@ Use [the architecture](docs/architecture.md) for the current system.
   TypeSafe/Jev, Voyage, Google Maps). Give a cost estimate.
 - Keep paid calls within that budget. Do not retry paid calls automatically.
 - Prefer free tiers and free development options. New paid resources need user approval.
-- Keep staging private. Public access needs user approval (Sprint 4).
-- Keep staging and production resources separate.
-- Never print or commit secrets. Use ignored local settings or Secret Manager.
-- Deploy staging only from this repository (`infra/gcp/` and
-  `.github/workflows/gcp-staging.yml`).
+- The Vercel demo URL is for the user and the course instructors.
+  Do not promote it publicly.
+- Store secrets in Vercel environment variables or ignored local settings.
+  Never print or commit secrets.
+- `infra/gcp/` and `.github/workflows/gcp-staging.yml` are optional.
+  Do not spend course time on GCP unless the user asks.

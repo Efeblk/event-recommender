@@ -1,13 +1,13 @@
 # Contributing
 
-This guide tells teammates how to change the code. Read the
+This guide tells how to change the code. This is a solo project. Read the
 [onboarding guide](docs/onboarding.md) first. The
 [project plan](docs/project-plan.md) has priority over this guide.
 
 ## Workflow
 
 1. Pick a task from the current sprint in the project plan, or open an issue
-   with the **Task** form. Tell the team in the group chat that you own it.
+   with the **Task** form.
 2. Update `master` and create a branch:
 
    ```sh
@@ -20,8 +20,7 @@ This guide tells teammates how to change the code. Read the
    ("Add weather card", not "Added weather card").
 4. Run the checks for the parts that you changed (see below).
 5. Push the branch and open a PR to `master`. Fill in the PR template.
-6. Ask one teammate to review. Answer each comment. Resolve all conversations.
-7. When CI is green and a teammate approves, click **Squash and merge**.
+6. PRs need no review. When CI is green, click **Squash and merge**.
    GitHub deletes the branch.
 
 ## Rules for `master`
@@ -30,19 +29,12 @@ GitHub enforces these rules on `master`:
 
 - Changes enter only through a pull request. Direct pushes are blocked.
 - Force pushes and branch deletion are blocked.
-- One approval is necessary. A new push removes old approvals.
-- All review conversations must be resolved.
 - These CI checks must pass: `collector (ubuntu-latest)`,
   `verify (ubuntu-latest)`, `container`, `terraform`, `docs` and
-  `dependency-review`. The branch must be up to date with `master`.
+  `dependency-review`.
 - Only squash merges are permitted. The history stays linear.
 
-The repository admin can merge a PR without an approval when no teammate is
-available. The admin cannot push directly to `master` either.
-
-If your branch is behind `master`, click **Update branch** on the PR or run
-`git pull --rebase origin master` and push again. Do not force push to a
-branch that another person also uses.
+The admin cannot push directly to `master` either.
 
 ## Checks to run before you push
 
@@ -61,7 +53,7 @@ In PowerShell, set `$env:EVENT_REC_BROWSER_START = '1'` before the browser tests
 
 ## What CI does
 
-`.github/workflows/web.yml` runs on each PR and on each push to `master`:
+`.github/workflows/web.yml` runs on each PR (not on pushes to `master`):
 
 - `collector`: collector tests.
 - `verify`: web unit tests, agent evaluation replay, release and input checks,
@@ -75,15 +67,15 @@ In PowerShell, set `$env:EVENT_REC_BROWSER_START = '1'` before the browser tests
 No CI job calls a paid API or needs a secret. A manual run (**Run workflow**)
 also tests Windows.
 
-Dependabot opens weekly PRs for npm packages and GitHub Actions. Review and
-merge them like any other PR.
+Dependabot opens weekly PRs for npm packages and GitHub Actions. Merge them
+like any other PR when CI is green.
 
 `.github/workflows/gcp-staging.yml` is a manual deploy to private staging. Only
 the project owner runs it.
 
-## Review checklist
+## Self-check before merge
 
-When you review a PR, check that:
+Before you merge, check that:
 
 - The PR does one task and the description says how it was tested.
 - Event cards come only from tool results.
