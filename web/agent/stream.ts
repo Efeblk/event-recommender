@@ -11,6 +11,7 @@ import { createWeatherTool } from './tools/weather.ts';
 import { createSavedTools } from './tools/saved.ts';
 import { CardSink, runAgentTurn, type AgentStreamEvent, type AgentTurnInput } from './turn.ts';
 import type { AgentEventCard } from './cards.ts';
+import { detectMessageLanguage } from '../lib/language.ts';
 
 export interface AgentToolDeps {
   search: (request: string) => Promise<SearchResult>;
@@ -54,7 +55,15 @@ export function agentTurnStream(options: {
 }): ReadableStream<Uint8Array> {
   const sink = new CardSink();
   const tools = agentTools(options.tools, sink.show, options.userId);
-  const runner = createRunner(createAgent({ model: options.model, tools, now: options.tools.now }), options.sessionService);
+  const runner = createRunner(
+    createAgent({
+      model: options.model,
+      tools,
+      now: options.tools.now,
+      language: detectMessageLanguage(options.input.message),
+    }),
+    options.sessionService,
+  );
   const encoder = new TextEncoder();
   const line = (event: AgentStreamEvent) => encoder.encode(`${JSON.stringify(event)}\n`);
   return new ReadableStream({

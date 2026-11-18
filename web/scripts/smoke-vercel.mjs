@@ -55,18 +55,25 @@ try {
     throw new Error(`health returned ${health.status}`);
   const ready = await fetch(`${origin}/api/ready`);
   const readiness = await ready.json();
-  if (
-    ready.status !== 200 ||
-    readiness.ready !== true ||
-    readiness.source !== 'bundled'
-  )
+  const catalogReady =
+    ready.status === 200 &&
+    readiness.ready === true &&
+    readiness.source === 'bundled';
+  const catalogStale =
+    ready.status === 503 &&
+    readiness.ready === false &&
+    readiness.source === 'bundled' &&
+    readiness.catalog?.status === 'stale' &&
+    readiness.reasons?.includes('catalog_not_ready');
+  if (!catalogReady && !catalogStale)
     throw new Error(`ready returned ${ready.status}`);
   const events = await fetch(`${origin}/api/events`);
   const catalog = await events.json();
   if (
     events.status !== 200 ||
     !Array.isArray(catalog.events) ||
-    !catalog.events.length
+    (catalogReady ? !catalog.events.length : catalog.events.length > 0) ||
+    (catalogStale && catalog.catalog?.status !== 'stale')
   )
     throw new Error(`events returned ${events.status}`);
   const home = await fetch(origin);
@@ -79,7 +86,7 @@ try {
   if (staticResponse.status !== 200)
     throw new Error(`static asset returned ${staticResponse.status}`);
   console.log(
-    `Vercel smoke passed: health, ready, ${catalog.events.length} cards, home, static asset.`,
+    `Vercel smoke passed: health, ${catalogReady ? 'ready' : 'stale fail-closed'}, ${catalog.events.length} cards, home, static asset.`,
   );
 } finally {
   await new Promise((resolve, reject) =>

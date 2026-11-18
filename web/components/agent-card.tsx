@@ -1,5 +1,6 @@
 import { CalendarDays, ExternalLink, MapPin } from 'lucide-react';
 import type { AgentEventCard } from '@/agent/cards';
+import type { SupportedLanguage } from '@/lib/language';
 
 const sourceName = (source: AgentEventCard['source']) =>
   source === 'bubilet'
@@ -20,6 +21,18 @@ const formatDate = (iso: string) =>
     minute: '2-digit',
   }).format(new Date(iso));
 
+const checkedLabel = (iso: string, language: SupportedLanguage) => {
+  const locale = language === 'en' ? 'en-GB' : 'tr-TR';
+  const checkedAt = new Intl.DateTimeFormat(locale, {
+    timeZone: 'Europe/Istanbul',
+    day: 'numeric',
+    month: 'short',
+    hour: '2-digit',
+    minute: '2-digit',
+  }).format(new Date(iso));
+  return language === 'en' ? `Checked ${checkedAt}` : `Kontrol edildi: ${checkedAt}`;
+};
+
 const formatPrice = (card: Pick<AgentEventCard, 'price' | 'currency' | 'priceKind'>) => {
   if (card.price === null) return 'Fiyat bilgisi yok';
   if (card.price === 0) return 'Ücretsiz';
@@ -32,7 +45,15 @@ const formatPrice = (card: Pick<AgentEventCard, 'price' | 'currency' | 'priceKin
 };
 
 /** A compact card built only from a tool result. */
-export function AgentCard({ card, actions }: { card: AgentEventCard; actions?: React.ReactNode }) {
+export function AgentCard({
+  card,
+  actions,
+  language = 'tr',
+}: {
+  card: AgentEventCard;
+  actions?: React.ReactNode;
+  language?: SupportedLanguage;
+}) {
   const offers = card.offers.length ? card.offers : [{ source: card.source, url: card.url, price: card.price, currency: card.currency }];
   return (
     <article className="agent-card" data-event-id={card.id}>
@@ -48,6 +69,7 @@ export function AgentCard({ card, actions }: { card: AgentEventCard; actions?: R
         {card.district ? ` · ${card.district}` : ''}
       </p>
       <p className="agent-card-price">{formatPrice(card)}</p>
+      <p className="agent-card-checked">{checkedLabel(card.checkedAt, language)}</p>
       {card.availability === 'sold_out' && <p className="agent-card-warning">Tükendi</p>}
       <ul className="agent-card-offers" aria-label={`${card.title} bilet bağlantıları`}>
         {offers.map((offer) => (

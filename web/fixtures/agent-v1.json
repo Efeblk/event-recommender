@@ -805,6 +805,47 @@
           }
         }
       ]
+    },
+    {
+      "id": "en-live-query-language",
+      "language": "en",
+      "goal": "The live English jazz or rock query gets an English answer.",
+      "turns": [
+        {
+          "user": "Find me a jazz or rock concert in Istanbul next weekend under 1500 TL",
+          "model": [
+            { "call": "search_events", "args": { "request": "jazz or rock concert in Istanbul next weekend under 1500 TL" } },
+            { "text": "I found current matches for next weekend under 1500 TL. The cards show the checked source details." }
+          ],
+          "expect": {
+            "tools": ["search_events"],
+            "searchIncludes": ["jazz", "rock", "next weekend", "1500"],
+            "constraints": { "dates": ["2026-11-07", "2026-11-08"], "maxPrice": 1500, "categories": ["Konser"] },
+            "cards": { "min": 2, "include": ["caz-moda-cmt", "rock-zorlu-cmt"] },
+            "replyLanguage": "en"
+          }
+        }
+      ]
+    },
+    {
+      "id": "en-empty-language",
+      "language": "en",
+      "goal": "An empty English search gets an English answer without copying a Turkish notice.",
+      "turns": [
+        {
+          "user": "Find a concert tomorrow under 10 TL.",
+          "model": [
+            { "call": "search_events", "args": { "request": "concert tomorrow under 10 TL" } },
+            { "text": "No current event matches those conditions. Would you like to try Friday instead?" }
+          ],
+          "expect": {
+            "tools": ["search_events"],
+            "responses": { "search_events": { "status": "empty" } },
+            "cards": { "max": 0 },
+            "replyLanguage": "en"
+          }
+        }
+      ]
     }
   ]
 }

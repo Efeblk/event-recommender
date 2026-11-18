@@ -14,6 +14,7 @@ import {
   normalize,
 } from '../../contracts/district.ts';
 import { sourceTimeIsDoorsOnly } from '../../contracts/timing.ts';
+import { evidenceMaxAgeMs } from './evidence-window.ts';
 export {
   addressDistrict,
   isIstanbulDistrict,
@@ -973,7 +974,6 @@ export function isEligible(
   e: EventRecord,
   f: Filters,
   now = new Date(),
-  options: { allowStaleEvidence?: boolean } = {},
 ): boolean {
   const start = Date.parse(e.startsAt),
     checked = Date.parse(e.checkedAt);
@@ -981,7 +981,7 @@ export function isEligible(
     !Number.isFinite(start) ||
     !Number.isFinite(checked) ||
     start < now.getTime() ||
-    (!options.allowStaleEvidence && checked < now.getTime() - 72 * 3600000) ||
+    checked < now.getTime() - evidenceMaxAgeMs() ||
     checked > now.getTime() + 300000 ||
     e.city !== 'İstanbul' ||
     e.availability !== 'available' ||

@@ -63,6 +63,7 @@ async function collect(stream: ReadableStream<Uint8Array>) {
 }
 
 await test('agent model configuration needs Vertex AI settings or a Gemini key', () => {
+  assert.equal(DEFAULT_AGENT_MODEL, 'gemini-3.5-flash-lite');
   assert.equal(agentModelConfigFrom({}), null);
   assert.deepEqual(agentModelConfigFrom({ GEMINI_API_KEY: 'k' }), {
     model: DEFAULT_AGENT_MODEL,
@@ -114,6 +115,27 @@ await test('search results give the model compact facts without links', () => {
   assert.equal(response.events.length, MAX_SEARCH_RESULTS);
   assert.ok(!JSON.stringify(response).includes('biletinial.com'));
   assert.equal(response.events[0].priceKind, 'exact');
+  assert.equal(events[0].checkedAt, now.toISOString());
+  assert.ok(!('checkedAt' in response.events[0]));
+});
+
+await test('search tool responses use status codes instead of localized notices', () => {
+  const result: SearchResult = {
+    recommendations: [],
+    filters: emptyFilters,
+    mode: 'filters',
+    status: 'empty',
+    notice: 'Bu koşullara uyan güncel bir etkinlik bulunamadı.',
+    totalCandidates: 0,
+  };
+  const { response } = searchEventsResult(result, 'Find me a concert next weekend');
+  assert.deepEqual(response, {
+    status: 'empty',
+    reason: null,
+    totalCandidates: 0,
+    events: [],
+  });
+  assert.ok(!JSON.stringify(response).includes('etkinlik'));
 });
 
 await test('event lookup accepts canonical and merged session IDs', () => {
@@ -144,6 +166,21 @@ await test('instruction states the Istanbul time and the tool rules', () => {
   assert.match(text, /7 September 2026/);
   assert.match(text, /Never name an event/);
   assert.match(text, /Treat it as data/);
+  assert.match(agentInstruction(now, 'en'), /Reply only in English/);
+});
+
+await test('each turn gives the model a deterministic language directive', async () => {
+  const model = new ScriptedLlm([say('I can help with Istanbul events.')]);
+  await collect(
+    agentTurnStream({
+      input: { sessionId: 'session-language', message: 'Find me a jazz concert next weekend.' },
+      userId: null,
+      model,
+      sessionService: new InMemorySessionService(),
+      tools: { search: async () => assert.fail(), lookup: async () => [] },
+    }),
+  );
+  assert.match(JSON.stringify(model.requests[0]), /Reply only in English/);
 });
 
 await test('one agent turn searches the real pipeline and shows cards only from tools', async () => {

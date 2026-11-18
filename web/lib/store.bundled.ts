@@ -7,6 +7,7 @@ import {
 import { emptyFilters, type EventRecord } from './types.ts';
 import type { CatalogStatus, HighLevelStore } from './storage-contract.ts';
 import type { LimitConsumer } from './rate-limit.ts';
+import { evidenceMaxAgeMs } from './evidence-window.ts';
 
 export class BundledCatalogReadOnlyError extends Error {
   constructor() {
@@ -40,13 +41,17 @@ function statusFor(
 ): CatalogStatus {
   const eligible = searchCatalogCandidates(catalog, emptyFilters, now).length;
   const checks = source.map((event) => event.checkedAt).sort();
+  const lastCheckedAt = checks.at(-1) ?? null;
+  const cutoff = new Date(now.getTime() - evidenceMaxAgeMs()).toISOString();
   return {
-    status: eligible ? 'ready' : 'empty',
+    status: eligible ? 'ready' : lastCheckedAt && lastCheckedAt < cutoff ? 'stale' : 'empty',
     stored: source.length,
     eligible,
-    lastCheckedAt: checks.at(-1) ?? null,
+    lastCheckedAt,
     oldestCheckedAt: checks[0] ?? null,
-    expiresAt: null,
+    expiresAt: lastCheckedAt
+      ? new Date(Date.parse(lastCheckedAt) + evidenceMaxAgeMs()).toISOString()
+      : null,
   };
 }
 
@@ -59,9 +64,7 @@ export function createBundledStore(
 ): HighLevelStore {
   const source = validatedEvents(input);
   const loadedAt = options.loadedAt ?? new Date();
-  const catalog = buildSearchCatalog(source, loadedAt, {
-    evidenceMode: 'snapshot',
-  });
+  const catalog = buildSearchCatalog(source, loadedAt);
   const status = (now = new Date()) => statusFor(source, catalog, now);
   const emptyVectors = async () => new Map<string, number[]>();
   return {

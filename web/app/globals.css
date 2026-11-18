@@ -400,6 +400,11 @@ button:focus-visible {
 .venue {
   margin: 0;
 }
+.event-checked {
+  margin: 0.35rem 0 0;
+  color: #6f7d74;
+  font-size: 11px;
+}
 .event-actions {
   display: flex;
   align-items: end;
@@ -974,6 +979,10 @@ footer small {
 }
 .agent-card-price {
   font-weight: 600;
+}
+.agent-card-checked {
+  color: var(--muted);
+  font-size: 0.75rem;
 }
 .agent-card-warning {
   color: var(--destructive);

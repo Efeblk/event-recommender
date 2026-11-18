@@ -6,7 +6,7 @@ export interface AgentModelConfig {
   location?: string;
 }
 
-export const DEFAULT_AGENT_MODEL = 'gemini-2.5-flash';
+export const DEFAULT_AGENT_MODEL = 'gemini-3.5-flash-lite';
 
 type AgentEnv = Record<string, string | undefined>;
 

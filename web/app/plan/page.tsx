@@ -9,6 +9,7 @@ import { AuthControl } from '@/components/auth-control';
 import { authHeaders, useAuth } from '@/components/auth';
 import type { AgentEventCard } from '@/agent/cards';
 import type { AgentStreamEvent } from '@/agent/turn';
+import { detectMessageLanguage, type SupportedLanguage } from '@/lib/language';
 
 type Turn = {
   id: string;
@@ -16,6 +17,7 @@ type Turn = {
   text: string;
   cards: AgentEventCard[];
   tools: string[];
+  language: SupportedLanguage;
   error?: string;
 };
 
@@ -103,10 +105,11 @@ export default function PlanPage() {
     const trimmed = text.trim();
     if (!trimmed || busy) return;
     const answerId = crypto.randomUUID();
+    const language = detectMessageLanguage(trimmed);
     setTurns((current) => [
       ...current,
-      { id: crypto.randomUUID(), role: 'user', text: trimmed, cards: [], tools: [] },
-      { id: answerId, role: 'assistant', text: '', cards: [], tools: [] },
+      { id: crypto.randomUUID(), role: 'user', text: trimmed, cards: [], tools: [], language },
+      { id: answerId, role: 'assistant', text: '', cards: [], tools: [], language },
     ]);
     setMessage('');
     setError('');
@@ -201,6 +204,7 @@ export default function PlanPage() {
                     <AgentCard
                       key={card.id}
                       card={card}
+                      language={turn.language}
                       actions={
                         auth.status === 'signed_in' ? (
                           <Button

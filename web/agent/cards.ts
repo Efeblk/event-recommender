@@ -5,6 +5,7 @@ export interface AgentEventCard {
   id: string;
   title: string;
   startsAt: string;
+  checkedAt: string;
   venue: string;
   district: string;
   address: string;
@@ -27,6 +28,7 @@ export function eventCard(event: EventRecord): AgentEventCard {
     id: event.id,
     title: event.title,
     startsAt: event.startsAt,
+    checkedAt: event.checkedAt,
     venue: event.venue,
     district: event.district,
     address: event.address,
