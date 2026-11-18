@@ -21,7 +21,8 @@ const formatDate = (iso: string) =>
     minute: '2-digit',
   }).format(new Date(iso));
 
-const checkedLabel = (iso: string, language: SupportedLanguage) => {
+const checkedLabel = (iso: string | undefined, language: SupportedLanguage) => {
+  if (!iso || !Number.isFinite(Date.parse(iso))) return null;
   const locale = language === 'en' ? 'en-GB' : 'tr-TR';
   const checkedAt = new Intl.DateTimeFormat(locale, {
     timeZone: 'Europe/Istanbul',
@@ -69,7 +70,9 @@ export function AgentCard({
         {card.district ? ` · ${card.district}` : ''}
       </p>
       <p className="agent-card-price">{formatPrice(card)}</p>
-      <p className="agent-card-checked">{checkedLabel(card.checkedAt, language)}</p>
+      {checkedLabel(card.checkedAt, language) && (
+        <p className="agent-card-checked">{checkedLabel(card.checkedAt, language)}</p>
+      )}
       {card.availability === 'sold_out' && <p className="agent-card-warning">Tükendi</p>}
       <ul className="agent-card-offers" aria-label={`${card.title} bilet bağlantıları`}>
         {offers.map((offer) => (

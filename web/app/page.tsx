@@ -127,9 +127,11 @@ function EventCard({ event }: { event: EventRecord }) {
             {event.district ? ` · ${event.district}` : ''}
           </span>
         </p>
-        <p className="event-checked">
-          Kontrol edildi: {formatCheckedAt(event.checkedAt)}
-        </p>
+        {event.checkedAt && Number.isFinite(Date.parse(event.checkedAt)) ? (
+          <p className="event-checked">
+            Kontrol edildi: {formatCheckedAt(event.checkedAt)}
+          </p>
+        ) : null}
         {hasMultipleOffers ? (
           <div className="event-actions event-offers">
             <span className="offers-label">Bilet seçenekleri</span>
