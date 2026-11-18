@@ -5,6 +5,7 @@ import {
   releaseLease,
   eventLabelIndex,
   eventLabelIndexStatus,
+  catalogWritesEnabled,
 } from '@/lib/store';
 import { parseLabelIndexInput } from '@/lib/event-label-index';
 import { jevConfigFrom } from '@/lib/jev';
@@ -26,11 +27,19 @@ export async function GET(request: Request) {
   try {
     return Response.json(await eventLabelIndexStatus());
   } catch {
-    return Response.json({ error: 'Label status unavailable' }, { status: 503 });
+    return Response.json(
+      { error: 'Label status unavailable' },
+      { status: 503 },
+    );
   }
 }
 
 export async function POST(request: Request) {
+  if (!catalogWritesEnabled())
+    return Response.json(
+      { error: 'Bundled catalog is read-only' },
+      { status: 405 },
+    );
   if (!(await authorized(request)))
     return Response.json({ error: 'Unauthorized' }, { status: 401 });
   let config, input;
@@ -40,15 +49,24 @@ export async function POST(request: Request) {
     if (body.length > 1024) throw new Error('Label request too large');
     input = parseLabelIndexInput(JSON.parse(body));
   } catch {
-    return Response.json({ error: 'Invalid label request or configuration' }, { status: 400 });
+    return Response.json(
+      { error: 'Invalid label request or configuration' },
+      { status: 400 },
+    );
   }
   if (!config)
-    return Response.json({ configured: false, error: 'Jev is not configured' }, { status: 503 });
+    return Response.json(
+      { configured: false, error: 'Jev is not configured' },
+      { status: 503 },
+    );
   let lease;
   try {
     lease = await acquireLease('label_index_lock', 300_000);
     if (!lease)
-      return Response.json({ error: 'Event labeling already running' }, { status: 409 });
+      return Response.json(
+        { error: 'Event labeling already running' },
+        { status: 409 },
+      );
     return Response.json(await eventLabelIndex(config, input, lease));
   } catch {
     return Response.json(

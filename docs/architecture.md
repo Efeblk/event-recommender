@@ -9,7 +9,7 @@ checks. PostgreSQL is outside the project.
 Browser (chat, cards, plan view, saved plans)
   │  Firebase Auth ID token
   ▼
-Cloud Run: Node service (web/)
+Vercel: static assets and one Node.js 22 function (web/)
   ├─ /api/agent ── ADK Runner ── root LlmAgent (Gemini)
   │                               ├─ search_events      → search pipeline (below)
   │                               ├─ get_event_details  → catalog store
@@ -18,8 +18,9 @@ Cloud Run: Node service (web/)
   │                               ├─ get_weather        → Open-Meteo
   │                               └─ save_plan / list_plans / save_favorite → Firestore
   ├─ /api/me/plans, /api/me/favorites → Firestore (signed-in user only)
-  └─ /api/health, /api/ready, /api/admin/*
-Cloud Run job: collector (scheduled) → catalog snapshot (Cloud Storage + Firestore)
+  ├─ /api/health, /api/ready
+  └─ /api/admin/* → read-only in bundled mode
+Manual collector run → tracked catalog snapshot
 ```
 
 - `web/agent/` holds the ADK agent, its instruction and the tool definitions.
@@ -43,7 +44,7 @@ Cloud Run job: collector (scheduled) → catalog snapshot (Cloud Storage + Fires
   renders event cards only from tool results.
 - Guardrails: message length and rate limits before the agent runs, schema
   checks on every tool call, user ID checks on write tools, provider text
-  treated as data, and secrets only from Secret Manager.
+  treated as data, and secrets only from runtime environment settings.
 - The sections below describe the current search pipeline. It becomes the
   `search_events` tool without changes to its correctness rules.
 
@@ -55,7 +56,7 @@ The shared identity code lives in `collector/identity/`. The GCP store uses it
 when publication prepares the search catalog. The collector's local checkpoint
 holds source records before that preparation.
 
-1. A scheduled collector job (not set up yet) restores the private catalog
+1. A manual collector run restores the private catalog
    checkpoint and the coverage backlog. It runs `collector/run.mjs` for Biletinial, Bubilet
    and Biletix. Each run has page, HTTP request and time limits. Later runs
    continue unfinished work.
@@ -65,7 +66,8 @@ holds source records before that preparation.
 3. The collector saves `collector/state/events.json` as a local checkpoint.
    It saves the coverage backlog and JSON reports separately. Failed pages
    retain their original check times. A later run does not make old evidence fresh.
-4. `collector/publish.mjs` sends verified source pages to `/api/admin/import`.
+4. For the optional GCP path, `collector/publish.mjs` sends verified source
+   pages to `/api/admin/import`.
    It then calls `/api/admin/collection` to publish a complete checkpoint.
    It reads the checkpoint back to verify publication.
 5. `web/lib/store.gcp.ts` writes immutable snapshots to private Cloud Storage.
@@ -75,8 +77,9 @@ holds source records before that preparation.
    Firestore holds source heads, the active catalog pointer, leases and request
    limits. A lease prevents concurrent writers from replacing newer data.
    Publication changes the pointer only after the complete snapshot exists.
-6. The Cloud Run Node service loads the published catalog for search.
-   `web/lib/store.node.ts` reads the snapshot store. It is the only backend.
+6. The Vercel function loads `web/data/events.json` and prepares it with the
+   same materialized catalog code. The optional Cloud Run service loads the
+   published GCP catalog.
 
 ## Request flow
 
@@ -203,13 +206,41 @@ Phase 1 complete.
 
 ## Operations
 
-Cloud Run serves the private staging application. Cloud Storage stores snapshots.
-Firestore stores coordination data. Secret Manager stores runtime credentials.
-Artifact Registry stores container images.
+Vercel serves the course demo. The optional GCP staging path uses Cloud Run,
+Cloud Storage, Firestore, Secret Manager and Artifact Registry.
 
 `/api/health` checks the application. `/api/ready` checks catalog and checkpoint
 readiness. A successful health check does not prove catalog readiness.
 
 The GCP deployment files are `infra/gcp/` ([guide](../infra/gcp/README.md))
 and `.github/workflows/gcp-staging.yml`. Nothing is applied yet.
-The Node snapshot path is the only runtime.
+
+## Vercel deployment
+
+Vercel is the course demo target. `npm run build:vercel` writes Build Output
+API v3 files to `web/.vercel/output/`. Vercel serves client assets as static
+files. One Node.js 22 function runs the vinext standalone server for pages and
+API routes. The function has a 60 second limit and keeps `/api/agent` responses
+streamed.
+
+Set these Vercel environment variables:
+
+- `EVENT_REC_CATALOG`: Set this to `bundled` to use `web/data/events.json`.
+- `DEPLOYMENT_ENV`: Firestore namespace. Use one stable name for the demo.
+- `GEMINI_API_KEY`: Free-tier Gemini API key for the ADK agent.
+- `AI_DAILY_LIMIT`: Daily agent turn limit. The default is 25.
+- `EVENT_REC_GCP_PROJECT`: Firebase project ID for Firestore.
+- `GOOGLE_SERVICE_ACCOUNT_JSON_BASE64`: Base64 service-account JSON. Keep it
+  secret.
+- `FIRESTORE_DATABASE`: Firestore database ID. It defaults to `(default)`.
+- `FIREBASE_WEB_API_KEY`: Public Firebase web configuration for sign-in.
+- `FIREBASE_PROJECT_ID`: Firebase Auth token audience and issuer project.
+- `FIREBASE_AUTH_DOMAIN`: Public Firebase Auth domain.
+- `EVENT_REC_AGENT_MODEL`: Optional Gemini model override.
+- `GOOGLE_MAPS_API_KEY`: Optional Routes API key. Omit it for the free demo.
+
+The function loads and materializes the bundled catalog once per warm
+instance. Admin catalog writes return `405` in this mode. Firestore stores
+users, plans, favorites, ADK sessions and rate-limit counters. It does not need
+`GCP_STORAGE_BUCKET`. Without the Firestore project and credentials, these
+records use the existing in-memory fallback.

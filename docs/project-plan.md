@@ -227,3 +227,6 @@ and English, plan an evening and save it. The final demo runs on that URL.
   instructors can use, and the final demo material. Decision: Vercel Hobby,
   Firebase Spark and a free Gemini API key. The plan now reflects the solo
   scope and the free-tier deployment.
+- 2026-11-18: PR #26 added the Vercel Hobby runtime. Result: Build Output API
+  v3 serves static assets and one Node.js 22 function. The function uses the
+  bundled catalog and Firestore without Cloud Storage. Offline checks pass.
