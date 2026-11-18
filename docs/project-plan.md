@@ -230,3 +230,6 @@ and English, plan an evening and save it. The final demo runs on that URL.
 - 2026-11-18: PR #26 added the Vercel Hobby runtime. Result: Build Output API
   v3 serves static assets and one Node.js 22 function. The function uses the
   bundled catalog and Firestore without Cloud Storage. Offline checks pass.
+- 2026-11-19: PR #27 fixes the course demo evidence window, Gemini default and
+  English replies. Result: all local Node.js 22 tests, builds, smoke checks and
+  the 36-case recorded agent evaluation pass. PR CI is pending.
