@@ -12,11 +12,29 @@ import { embeddingCacheKey, type EmbeddingConfig } from './providers.ts';
 import type { EventRecord } from './types.ts';
 import type { HighLevelStore } from './storage-contract.ts';
 import { indexAuditedBatch, type AuditedIndexInput } from './audited-index.ts';
-import { labelEventBatch, labelStatus, type LabelIndexInput } from './event-label-index.ts';
+import {
+  labelEventBatch,
+  labelStatus,
+  type LabelIndexInput,
+} from './event-label-index.ts';
 import type { JevConfig } from './jev.ts';
-import { voyageConfigFrom, voyageCacheKey, type VoyageConfig } from './voyage.ts';
+import {
+  voyageConfigFrom,
+  voyageCacheKey,
+  type VoyageConfig,
+} from './voyage.ts';
 import type { Lease } from './storage-contract.ts';
 import { requestLogKey, type RequestLogEntry } from './request-log.ts';
+import {
+  createRuntimeFirestore,
+  standaloneFirestoreConfigured,
+} from './firestore-runtime.node.ts';
+import {
+  firestoreLimitConsumer,
+  memoryLimitConsumer,
+  type LimitFirestore,
+} from './limit-storage.node.ts';
+import { catalogStorageMode } from './storage-selection.ts';
 export type { RateLimitResult } from './rate-limit.ts';
 
 export function runtime() {
@@ -24,33 +42,75 @@ export function runtime() {
 }
 let instance: Promise<HighLevelStore> | undefined;
 let clients: ReturnType<typeof createGcpClients> | undefined;
+let bundledLimits: Promise<LimitConsumer> | undefined;
+const inMemoryLimits = memoryLimitConsumer();
+
+function catalogMode() {
+  return catalogStorageMode(env);
+}
+
+function bundledLimitConsumer() {
+  return (bundledLimits ??= (async () => {
+    if (!standaloneFirestoreConfigured(env)) return inMemoryLimits;
+    const firestore = await createRuntimeFirestore(env);
+    if (!firestore) return inMemoryLimits;
+    return firestoreLimitConsumer(
+      firestore as unknown as LimitFirestore,
+      env.DEPLOYMENT_ENV?.trim() || 'local',
+    );
+  })().catch((error) => {
+    bundledLimits = undefined;
+    throw error;
+  }));
+}
 /** Stores one request log entry in the collection bucket. */
 export async function logRequest(entry: RequestLogEntry) {
+  if (catalogMode() === 'bundled') return;
   const { blobs } = await storageClients();
-  await blobs.putImmutable(requestLogKey(env.DEPLOYMENT_ENV ?? 'default', entry), JSON.stringify(entry));
+  await blobs.putImmutable(
+    requestLogKey(env.DEPLOYMENT_ENV ?? 'default', entry),
+    JSON.stringify(entry),
+  );
 }
 function storageClients() {
+  if (catalogMode() === 'bundled')
+    throw new Error('Bundled catalog has no Cloud Storage client.');
   return (clients ??= createGcpClients(env).catch((error) => {
     clients = undefined;
     throw error;
   }));
 }
 function store() {
-  return (instance ??= storageClients()
-    .then((clients) => {
-      const voyage = voyageConfigFrom({
-        VOYAGE_API_KEY: env.VOYAGE_API_KEY,
-        VOYAGE_MODEL: env.VOYAGE_MODEL,
-        VOYAGE_DIMENSIONS: env.VOYAGE_DIMENSIONS,
-      });
-      return createGcpStore({ ...clients, namespace: env.DEPLOYMENT_ENV,
-        ...(voyage ? { embeddingProfile: { profile: voyageCacheKey(voyage), dimensions: voyage.dimensions } } : {}),
-      });
-    })
-    .catch((error) => {
-      instance = undefined;
-      throw error;
-    }));
+  return (instance ??= (async () => {
+    if (catalogMode() === 'bundled') {
+      const [{ bundledStore }, consumeLimit] = await Promise.all([
+        import('./store.bundled.ts'),
+        bundledLimitConsumer(),
+      ]);
+      return bundledStore(consumeLimit);
+    }
+    const clients = await storageClients();
+    const voyage = voyageConfigFrom({
+      VOYAGE_API_KEY: env.VOYAGE_API_KEY,
+      VOYAGE_MODEL: env.VOYAGE_MODEL,
+      VOYAGE_DIMENSIONS: env.VOYAGE_DIMENSIONS,
+    });
+    return createGcpStore({
+      ...clients,
+      namespace: env.DEPLOYMENT_ENV,
+      ...(voyage
+        ? {
+            embeddingProfile: {
+              profile: voyageCacheKey(voyage),
+              dimensions: voyage.dimensions,
+            },
+          }
+        : {}),
+    });
+  })().catch((error) => {
+    instance = undefined;
+    throw error;
+  }));
 }
 export async function auditedVoyageIndex(
   config: VoyageConfig,
@@ -79,14 +139,19 @@ export async function eventLabelIndex(
   });
 }
 export async function eventLabelIndexStatus() {
-  return labelStatus(await store(), (await storageClients()).control, env.DEPLOYMENT_ENV ?? '', new Date());
+  return labelStatus(
+    await store(),
+    (await storageClients()).control,
+    env.DEPLOYMENT_ENV ?? '',
+    new Date(),
+  );
 }
 export const candidates: HighLevelStore['candidates'] = async (...args) =>
   (await store()).candidates(...args);
-export const embeddingCandidates: HighLevelStore['embeddingCandidates'] = async (...args) =>
-  (await store()).embeddingCandidates(...args);
-export const activateSearchCatalog: HighLevelStore['activateSearchCatalog'] = async (...args) =>
-  (await store()).activateSearchCatalog(...args);
+export const embeddingCandidates: HighLevelStore['embeddingCandidates'] =
+  async (...args) => (await store()).embeddingCandidates(...args);
+export const activateSearchCatalog: HighLevelStore['activateSearchCatalog'] =
+  async (...args) => (await store()).activateSearchCatalog(...args);
 export const catalogStatus: HighLevelStore['catalogStatus'] = async (...args) =>
   (await store()).catalogStatus(...args);
 export const health: HighLevelStore['health'] = async (...args) =>
@@ -122,7 +187,16 @@ export const saveVoyageVectors: HighLevelStore['saveVoyageVectors'] = async (
   ...args
 ) => (await store()).saveVoyageVectors(...args);
 export function collectionStateConfigured() {
-  return Boolean(env.GCP_STORAGE_BUCKET && env.EVENT_REC_GCP_PROJECT);
+  return (
+    catalogMode() === 'gcp' &&
+    Boolean(env.GCP_STORAGE_BUCKET && env.EVENT_REC_GCP_PROJECT)
+  );
+}
+export function catalogWritesEnabled() {
+  return catalogMode() === 'gcp';
+}
+export function bundledCatalogConfigured() {
+  return catalogMode() === 'bundled';
 }
 
 export async function digest(text: string) {
@@ -151,10 +225,10 @@ export async function aiDailyRateLimit(
   consume: LimitConsumer = consumeLimit,
 ) {
   const day = Math.floor(now / 86400000),
-    configured = Number(configuredValue || 100);
+    configured = Number(configuredValue || 25);
   const cap = Number.isFinite(configured)
     ? Math.max(1, Math.min(10000, configured))
-    : 100;
+    : 25;
   return consumeBuckets(
     [
       {

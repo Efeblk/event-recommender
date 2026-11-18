@@ -4,9 +4,15 @@ import {
   acquireLease,
   releaseLease,
   importPages,
+  catalogWritesEnabled,
 } from '@/lib/store';
 import { validateImport } from '@/lib/catalog';
 export async function POST(request: Request) {
+  if (!catalogWritesEnabled())
+    return Response.json(
+      { error: 'Bundled catalog is read-only' },
+      { status: 405 },
+    );
   const token = runtime().SYNC_TOKEN;
   if (
     !token ||

@@ -3,19 +3,16 @@
 Event Recommender is a Google ADK agent that plans Istanbul outings from
 Turkish and English requests. It finds correct, bookable events, plans the route between
 venues and saves plans for the user.
-It is the group project for the course JOB191 - Dream Data Labs Solutions AI
+It is the solo project for the course JOB191 - Dream Data Labs Solutions AI
 Augmented Software Engineering (1).
-New teammates start with [the onboarding guide](docs/onboarding.md) and
-[CONTRIBUTING.md](CONTRIBUTING.md).
 Use [the project plan](docs/project-plan.md) for scope, sprints and acceptance checks.
 Use [the architecture](docs/architecture.md) for the target system and the current data flow.
 
 The agent lives in `web/agent/`. The search application below is its
 `search_events` tool.
 
-The application runs on Node in GCP Cloud Run.
-Firestore holds catalog pointers, leases and request limits.
-Private Cloud Storage holds catalog checkpoints and cached vectors.
+The course demo runs on Vercel. It uses the tracked catalog snapshot and
+Firestore on the Firebase Spark plan. The optional GCP files remain available.
 The collector supports Biletinial, Bubilet and Biletix.
 PostgreSQL is outside the project.
 
@@ -95,8 +92,12 @@ Other settings. Each feature turns off safely when its setting is missing:
   Google and guest sign-in. Without them, the UI hides sign-in. The server
   checks Firebase ID tokens (RS256, Google certificates) and sets per-user
   limits of 6 turns per minute and 60 per hour.
-- `GCP_STORAGE_BUCKET` and `EVENT_REC_GCP_PROJECT`: Firestore for saved data and
-  agent sessions. Without them, both stay in process memory.
+- `EVENT_REC_GCP_PROJECT` and `GOOGLE_SERVICE_ACCOUNT_JSON_BASE64`: Firestore
+  for saved data, agent sessions and rate limits on Vercel. The second setting
+  is the base64 service-account JSON and must stay secret.
+- `GCP_STORAGE_BUCKET` and `EVENT_REC_GCP_PROJECT`: Existing Cloud Run catalog
+  storage. Cloud Run can use Application Default Credentials.
+  Without Firestore settings, user data stays in process memory.
   `DEPLOYMENT_ENV` sets the namespace (`envs/{env}/...`).
 
 Firestore paths are `envs/{env}/users/{uid}/plans/{id}`,
@@ -139,11 +140,10 @@ It distinguishes verified, retired, failed, quarantined and unvisited pages.
 Failed pages keep their original check times.
 Collection does not call TypeSafe. Optional Voyage indexing has a separate budget.
 
-Use [the collector guide](collector/README.md).
-A scheduled collector job is not set up yet (see the Later list in the
-project plan). A scheduled job must import verified records, publish a
-complete checkpoint and read it back. Raw provider pages stay out of
-workflow artifacts.
+Use [the collector guide](collector/README.md). Run collection manually.
+For the optional GCP path, import verified records, publish a complete
+checkpoint and read it back. Raw provider pages stay out of workflow
+artifacts.
 
 ## Verification
 
@@ -203,3 +203,26 @@ Nothing is applied yet. Staging needs a new GCP project and a user decision.
 Staging is private. The product plan permits staging deploys and gate approval.
 Public access and new paid resources need user approval.
 `/api/health` checks the application. `/api/ready` checks catalog readiness.
+
+## Deploy to Vercel
+
+Create a Vercel project from this repository. Set **Root Directory** to `web`.
+The tracked `web/vercel.json` runs `npm run build:vercel` and deploys
+`web/.vercel/output/`.
+
+Set `EVENT_REC_CATALOG`, `DEPLOYMENT_ENV`, `GEMINI_API_KEY`,
+`EVENT_REC_GCP_PROJECT`, `GOOGLE_SERVICE_ACCOUNT_JSON_BASE64`,
+`FIREBASE_WEB_API_KEY`, `FIREBASE_PROJECT_ID` and `FIREBASE_AUTH_DOMAIN` in
+Vercel. Set `AI_DAILY_LIMIT` if the default limit of 25 is not suitable. The
+optional settings are `FIRESTORE_DATABASE`, `EVENT_REC_AGENT_MODEL` and
+`GOOGLE_MAPS_API_KEY`. Do not set `GCP_STORAGE_BUCKET` for the bundled demo.
+
+Before deployment, run these offline checks from `web/`:
+
+```sh
+npm run build:vercel
+npm run test:smoke:vercel
+```
+
+Do not deploy the demo URL as a public product. Give it only to the user and
+the course instructors.

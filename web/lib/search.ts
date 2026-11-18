@@ -7,9 +7,18 @@ import {
 } from './types.ts';
 import { hasSupportedEventFormat } from './event-format.ts';
 import { categoryIntent, isFullPreferenceReset } from './intent.ts';
-import { addressDistrict, isIstanbulDistrict, ISTANBUL_DISTRICTS, normalize } from '../../contracts/district.ts';
+import {
+  addressDistrict,
+  isIstanbulDistrict,
+  ISTANBUL_DISTRICTS,
+  normalize,
+} from '../../contracts/district.ts';
 import { sourceTimeIsDoorsOnly } from '../../contracts/timing.ts';
-export { addressDistrict, isIstanbulDistrict, normalize } from '../../contracts/district.ts';
+export {
+  addressDistrict,
+  isIstanbulDistrict,
+  normalize,
+} from '../../contracts/district.ts';
 
 const istanbulDayFormatter = new Intl.DateTimeFormat('en-CA', {
   timeZone: 'Europe/Istanbul',
@@ -195,8 +204,7 @@ function parseCategories(q: string, previous: Filters) {
   if (distinct.length === 1) {
     category = distinct[0];
     excluded.delete(category);
-    if (isExclusiveCategoryChoice(positiveText, category))
-      excluded.clear();
+    if (isExclusiveCategoryChoice(positiveText, category)) excluded.clear();
   }
   return {
     category,
@@ -965,6 +973,7 @@ export function isEligible(
   e: EventRecord,
   f: Filters,
   now = new Date(),
+  options: { allowStaleEvidence?: boolean } = {},
 ): boolean {
   const start = Date.parse(e.startsAt),
     checked = Date.parse(e.checkedAt);
@@ -972,7 +981,7 @@ export function isEligible(
     !Number.isFinite(start) ||
     !Number.isFinite(checked) ||
     start < now.getTime() ||
-    checked < now.getTime() - 72 * 3600000 ||
+    (!options.allowStaleEvidence && checked < now.getTime() - 72 * 3600000) ||
     checked > now.getTime() + 300000 ||
     e.city !== 'İstanbul' ||
     e.availability !== 'available' ||
@@ -1006,7 +1015,10 @@ export function isEligible(
     // A validity-window boundary or unresolved admission timestamp is not
     // evidence of a booked start time. Preserve legacy session behavior when
     // the source has not supplied timing semantics yet.
-    if (sourceTimeIsDoorsOnly(e.description) || (e.attendanceTiming && e.attendanceTiming.kind !== 'timed_session'))
+    if (
+      sourceTimeIsDoorsOnly(e.description) ||
+      (e.attendanceTiming && e.attendanceTiming.kind !== 'timed_session')
+    )
       return false;
     const localTime = istanbulTimeFormatter.format(new Date(start));
     if (
@@ -1075,14 +1087,34 @@ const stop = new Set([
   'hafta',
   'sonu',
 ]);
-type RankingTextFields = Pick<EventRecord, 'title' | 'description' | 'venue' | 'category'>;
-const rankingTextCache = new WeakMap<EventRecord, RankingTextFields & { text: string }>();
+type RankingTextFields = Pick<
+  EventRecord,
+  'title' | 'description' | 'venue' | 'category'
+>;
+const rankingTextCache = new WeakMap<
+  EventRecord,
+  RankingTextFields & { text: string }
+>();
 function rankingText(event: EventRecord): string {
   const cached = rankingTextCache.get(event);
-  if (cached && cached.title === event.title && cached.description === event.description && cached.venue === event.venue && cached.category === event.category)
+  if (
+    cached &&
+    cached.title === event.title &&
+    cached.description === event.description &&
+    cached.venue === event.venue &&
+    cached.category === event.category
+  )
     return cached.text;
-  const text = normalize(`${event.title} ${event.description} ${event.venue} ${event.category}`);
-  rankingTextCache.set(event, { title: event.title, description: event.description, venue: event.venue, category: event.category, text });
+  const text = normalize(
+    `${event.title} ${event.description} ${event.venue} ${event.category}`,
+  );
+  rankingTextCache.set(event, {
+    title: event.title,
+    description: event.description,
+    venue: event.venue,
+    category: event.category,
+    text,
+  });
   return text;
 }
 export function rankEvents(

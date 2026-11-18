@@ -7,6 +7,7 @@ import {
   acquireLease,
   releaseLease,
   collectionStateConfigured,
+  catalogWritesEnabled,
 } from '@/lib/store';
 import { MAX_REPORT_BYTES, parseCollectionReport } from '@/lib/operations';
 
@@ -28,11 +29,19 @@ export async function GET(request: Request) {
     const publication = new URL(request.url).searchParams.get('publication');
     if (publication) {
       if (publication !== 'latest')
-        return Response.json({ error: 'Invalid publication query' }, { status: 400 });
+        return Response.json(
+          { error: 'Invalid publication query' },
+          { status: 400 },
+        );
       const latest = await checkpointPublication();
       if (!latest)
-        return Response.json({ error: 'No checkpoint publication attempt' }, { status: 404 });
-      return Response.json(latest, { headers: { 'cache-control': 'no-store' } });
+        return Response.json(
+          { error: 'No checkpoint publication attempt' },
+          { status: 404 },
+        );
+      return Response.json(latest, {
+        headers: { 'cache-control': 'no-store' },
+      });
     }
     const body = await readCheckpoint();
     if (!body)
@@ -56,6 +65,11 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   const requestStartedAt = Date.now();
+  if (!catalogWritesEnabled())
+    return Response.json(
+      { error: 'Bundled catalog is read-only' },
+      { status: 405 },
+    );
   if (!(await authorized(request)))
     return Response.json({ error: 'Unauthorized' }, { status: 401 });
   if (!collectionStateConfigured())

@@ -18,7 +18,7 @@ await test('staging deployment runs only by hand through the protected environme
   const triggers = workflow.slice(workflow.indexOf('\non:'), workflow.indexOf('\npermissions:'));
   assert.match(triggers, /workflow_dispatch:/);
   assert.doesNotMatch(triggers, /\b(?:push|pull_request|schedule|workflow_run|repository_dispatch):/);
-  assert.match(workflow, /\n {4}environment: gcp-staging\n/);
+  assert.match(workflow, /\r?\n {4}environment: gcp-staging\r?\n/);
   assert.match(workflow, /test "\$EXPECTED_SHA" = "\$GITHUB_SHA"/);
   for (const check of ['verify (ubuntu-latest)', 'collector (ubuntu-latest)', 'terraform', 'container'])
     assert.ok(workflow.includes(`'${check}'`), check);

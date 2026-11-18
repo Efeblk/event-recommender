@@ -1,5 +1,6 @@
 import { createHash } from 'node:crypto';
 import type { Readable } from 'node:stream';
+import { serviceAccountCredentialsFromEnv } from './firestore-runtime.node.ts';
 import type {
   BlobStore,
   ControlStore,
@@ -90,8 +91,13 @@ export interface GcpSdkConstructors {
   Firestore: new (options: {
     projectId: string;
     databaseId: string;
+    credentials?: { client_email: string; private_key: string };
   }) => FirestoreLike;
-  Storage: new (options: { projectId: string; retryOptions?: { autoRetry: boolean; maxRetries?: number } }) => StorageLike;
+  Storage: new (options: {
+    projectId: string;
+    credentials?: { client_email: string; private_key: string };
+    retryOptions?: { autoRetry: boolean; maxRetries?: number };
+  }) => StorageLike;
 }
 
 export interface ExactGenerationObjectReader { read(bucket: string, objectName: string, generation: string, maxBytes: number, signal?: AbortSignal): Promise<Buffer | null>; }
@@ -365,6 +371,7 @@ export async function createGcpClients(
   constructors?: GcpSdkConstructors,
 ) {
   const config = gcpStorageConfigFromEnv(env);
+  const credentials = serviceAccountCredentialsFromEnv(env) ?? undefined;
   const sdk =
     constructors ??
     ((await Promise.all([
@@ -378,7 +385,11 @@ export async function createGcpClients(
     firestore: new sdk.Firestore({
       projectId: config.projectId,
       databaseId: config.databaseId,
+      ...(credentials ? { credentials } : {}),
     }),
-    storage: new sdk.Storage({ projectId: config.projectId }),
+    storage: new sdk.Storage({
+      projectId: config.projectId,
+      ...(credentials ? { credentials } : {}),
+    }),
   });
 }

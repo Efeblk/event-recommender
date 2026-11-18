@@ -28,6 +28,8 @@ import {
 export interface SearchCatalog {
   schemaVersion: 1;
   materializedAt: string;
+  /** A bundled snapshot keeps its recorded source evidence until the next deploy. */
+  evidenceMode?: 'snapshot';
   sourceStatus: Pick<EventRecord, 'startsAt' | 'checkedAt' | 'availability'>[];
   groups: { versions: { from: number; events: EventRecord[] }[] }[];
 }
@@ -305,13 +307,14 @@ function identityFamilies(events: EventRecord[]): EventRecord[][] {
 function ambiguousSourceEvidenceIds(events: EventRecord[]): Set<string> {
   const explicitConflicts = new Set(
     events
-      .filter((event) =>
-        hasExplicitDoorTimeStartConflict({
-          description: event.description,
-          startsAt: event.startsAt,
-        }) ||
-        hasExplicitSameEventSoldOutConflict(event) ||
-        hasExplicitSameEventVenueConflict(event),
+      .filter(
+        (event) =>
+          hasExplicitDoorTimeStartConflict({
+            description: event.description,
+            startsAt: event.startsAt,
+          }) ||
+          hasExplicitSameEventSoldOutConflict(event) ||
+          hasExplicitSameEventVenueConflict(event),
       )
       .map((event) => event.id),
   );
@@ -328,7 +331,11 @@ function ambiguousSourceEvidenceIds(events: EventRecord[]): Set<string> {
 export function buildSearchCatalog(
   events: EventRecord[],
   at: Date,
+  options: { evidenceMode?: 'snapshot' } = {},
 ): SearchCatalog {
+  const eligibility = {
+    allowStaleEvidence: options.evidenceMode === 'snapshot',
+  };
   const eligible: EventRecord[] = [];
   const ambiguousEvidence = ambiguousSourceEvidenceIds(events);
   let projectionBytes = 0;
@@ -345,14 +352,15 @@ export function buildSearchCatalog(
     // Correct retained records only when their own program evidence identifies
     // one of the narrowly verified formats supported by event-format.
     const event =
-      ['Stand-up', 'Gezi'].includes(verifiedCategory) && sourceEvent.category !== verifiedCategory
+      ['Stand-up', 'Gezi'].includes(verifiedCategory) &&
+      sourceEvent.category !== verifiedCategory
         ? { ...sourceEvent, category: verifiedCategory }
         : sourceEvent;
     const checked = Date.parse(event.checkedAt);
     const activation = Math.max(at.getTime(), checked - 300000);
     if (
       !Number.isFinite(activation) ||
-      !isEligible(event, emptyFilters, new Date(activation))
+      !isEligible(event, emptyFilters, new Date(activation), eligibility)
     )
       continue;
     eligible.push(event);
@@ -363,7 +371,9 @@ export function buildSearchCatalog(
       const checked = Date.parse(member.checkedAt);
       for (const boundary of [
         checked - 300000,
-        checked + 72 * 3600000 + 1,
+        ...(options.evidenceMode === 'snapshot'
+          ? []
+          : [checked + 72 * 3600000 + 1]),
         Date.parse(member.startsAt) + 1,
       ])
         if (boundary > at.getTime()) boundaries.add(boundary);
@@ -372,7 +382,7 @@ export function buildSearchCatalog(
     let previous = '';
     for (const from of [...boundaries].sort((a, b) => a - b)) {
       const active = members.filter((event) =>
-        isEligible(event, emptyFilters, new Date(from)),
+        isEligible(event, emptyFilters, new Date(from), eligibility),
       );
       const resolution = resolveEventRecordIdentity(active);
       const byId = new Map(active.map((event) => [event.id, event]));
@@ -422,6 +432,7 @@ export function buildSearchCatalog(
   return {
     schemaVersion: 1,
     materializedAt: at.toISOString(),
+    ...(options.evidenceMode ? { evidenceMode: options.evidenceMode } : {}),
     groups,
     sourceStatus: events.map(({ startsAt, checkedAt, availability }) => ({
       startsAt,
@@ -447,7 +458,11 @@ export function searchCatalogCandidates(
         if (version.from > time) break;
         selected = version.events;
       }
-      return selected.filter((event) => isEligible(event, filters, at));
+      return selected.filter((event) =>
+        isEligible(event, filters, at, {
+          allowStaleEvidence: catalog.evidenceMode === 'snapshot',
+        }),
+      );
     })
     .sort(
       (a, b) =>

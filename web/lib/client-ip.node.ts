@@ -42,12 +42,26 @@ function normalizeIp(value: string): string | null {
  * therefore require a separate, qualified mode before they can be trusted.
  * https://docs.cloud.google.com/functions/docs/reference/headers
  * https://docs.cloud.google.com/load-balancing/docs/https#x-forwarded-for_header
+ *
+ * Vercel sets X-Real-IP and X-Forwarded-For. Its mode uses X-Real-IP first,
+ * then the first forwarded address. VERCEL=1 selects this mode automatically.
  */
 export function clientIp(
   request: Request,
   env: Record<string, string | undefined>,
 ): string {
-  if (env.EVENT_REC_CLIENT_IP_MODE !== 'cloud-run-direct') return SHARED_CLIENT;
+  const mode =
+    env.EVENT_REC_CLIENT_IP_MODE ?? (env.VERCEL === '1' ? 'vercel' : '');
+  if (mode === 'vercel') {
+    const real = normalizeIp(request.headers.get('x-real-ip') ?? '');
+    if (real) return real;
+    const forwarded = request.headers.get('x-forwarded-for');
+    if (!forwarded) return SHARED_CLIENT;
+    const values = forwarded.split(',');
+    if (values.length > 32) return SHARED_CLIENT;
+    return normalizeIp(values[0] ?? '') ?? SHARED_CLIENT;
+  }
+  if (mode !== 'cloud-run-direct') return SHARED_CLIENT;
 
   const forwarded = request.headers.get('x-forwarded-for');
   if (!forwarded) return SHARED_CLIENT;

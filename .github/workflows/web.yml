@@ -62,6 +62,10 @@ jobs:
       - run: npm run build:node
       - name: Verify compiled Node server without API keys
         run: npm run test:smoke:node
+      - name: Verify Vercel output without API keys
+        run: |
+          npm run build:vercel
+          npm run test:smoke:vercel
       - name: Install Chromium for browser tests
         run: npx playwright install --with-deps chromium
       - name: Verify desktop and mobile browser flows without API calls

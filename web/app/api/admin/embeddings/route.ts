@@ -5,6 +5,7 @@ import {
   releaseLease,
   readCheckpoint,
   auditedVoyageIndex,
+  catalogWritesEnabled,
 } from '@/lib/store';
 import { parseAuditedIndexInput } from '@/lib/audited-index';
 import {
@@ -61,6 +62,11 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
+  if (!catalogWritesEnabled())
+    return Response.json(
+      { error: 'Bundled catalog is read-only' },
+      { status: 405 },
+    );
   if (!(await authorized(request)))
     return Response.json({ error: 'Unauthorized' }, { status: 401 });
   let voyage;

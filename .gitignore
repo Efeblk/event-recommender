@@ -1,6 +1,7 @@
 # Dependencies and builds
 node_modules/
 dist/
+.vercel/
 
 # Local settings and secrets
 .env
