@@ -1,7 +1,7 @@
 import { FunctionTool } from '@google/adk';
 import { z } from 'zod';
 import type { EventRecord } from '../../lib/types.ts';
-import { eventCard, type AgentEventCard } from '../cards.ts';
+import { eventCard, istanbulTime, type AgentEventCard } from '../cards.ts';
 
 export const MAX_DETAIL_IDS = 8;
 const DESCRIPTION_CHARS = 1200;
@@ -14,6 +14,7 @@ export interface EventDetailsDeps {
 export function eventDetails(event: EventRecord) {
   return {
     ...eventCard(event),
+    startsAt: istanbulTime(event.startsAt),
     description: event.description.replace(/\s+/g, ' ').trim().slice(0, DESCRIPTION_CHARS),
     checkedAt: event.checkedAt,
   };

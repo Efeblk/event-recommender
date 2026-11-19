@@ -8,6 +8,7 @@ import {
   type SavedPlan,
   type UserStore,
 } from '../../lib/user-store.ts';
+import { istanbulTime } from '../cards.ts';
 import { buildTimeline } from '../planner.ts';
 import type { LegCache } from './planning.ts';
 
@@ -99,7 +100,12 @@ export function createSavedTools(deps: SavedToolsDeps) {
             id: plan.id,
             title: plan.title,
             note: plan.note,
-            items: plan.items.map(({ eventId, title, startsAt, venue }) => ({ eventId, title, startsAt, venue })),
+            items: plan.items.map(({ eventId, title, startsAt, venue }) => ({
+              eventId,
+              title,
+              startsAt: istanbulTime(startsAt),
+              venue,
+            })),
           })),
         };
       } catch {

@@ -2,7 +2,7 @@ import { FunctionTool } from '@google/adk';
 import { z } from 'zod';
 import type { EventRecord } from '../../lib/types.ts';
 import type { RouteLookup } from '../../lib/routes.ts';
-import { eventCard, type AgentEventCard } from '../cards.ts';
+import { eventCard, istanbulTime, type AgentEventCard } from '../cards.ts';
 import { buildTimeline, venueAddress, type Leg, type TravelMode } from '../planner.ts';
 
 export const MAX_ROUTE_CALLS_PER_TURN = 6;
@@ -110,10 +110,16 @@ export function createPlanningTools(deps: PlanningDeps, cache = new LegCache()) 
         routeStatus.push(status);
       }
       deps.showCards(ordered.map(eventCard));
+      const timeline = buildTimeline(ordered, legs);
       return {
         status: 'ok',
         missing,
-        ...buildTimeline(ordered, legs),
+        ...timeline,
+        items: timeline.items.map((item) => ({
+          ...item,
+          startsAt: istanbulTime(item.startsAt),
+          estimatedEndsAt: istanbulTime(item.estimatedEndsAt),
+        })),
         legs,
         routeStatus: [...new Set(routeStatus)],
       };

@@ -21,6 +21,7 @@ Answer in the language of the user's last message (Turkish or English). Be short
 This turn's language is ${turnLanguage}. Reply only in ${turnLanguage}.
 
 Rules:
+- Times in tool results are Istanbul local time. State them as given.
 - Use tools for every event fact. Never name an event, date, time, venue, price
   or link that a tool did not return in this conversation.
 - The app shows event cards from tool results next to your answer. Do not
