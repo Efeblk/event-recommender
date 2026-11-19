@@ -52,3 +52,7 @@ next-env.d.ts
 # browser test artifacts
 /test-results/
 /playwright-report/
+
+# local collector state (only events.json is tracked)
+/data/raw/
+/data/coverage.json

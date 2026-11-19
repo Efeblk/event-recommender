@@ -232,4 +232,8 @@ and English, plan an evening and save it. The final demo runs on that URL.
   bundled catalog and Firestore without Cloud Storage. Offline checks pass.
 - 2026-11-19: PR #27 fixes the course demo evidence window, Gemini default and
   English replies. Result: all local Node.js 22 tests, builds, smoke checks and
-  the 36-case recorded agent evaluation pass. PR CI is pending.
+  the 36-case recorded agent evaluation pass. PR CI passed and the PR is merged.
+- 2026-11-19: Manual collection run refreshed `web/data/events.json`.
+  Result: 2914 sessions from Biletinial, Bubilet and Biletix. All sessions
+  have a source check from the last 72 hours. 2871 sessions are in the future.
+  The run stopped at the raw storage budget (1490 of 2000 detail pages).

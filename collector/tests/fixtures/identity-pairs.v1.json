@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "source": "web/data/events.json frozen 2026-09-26 snapshot",
+  "source": "web/tests/fixtures/events-2026-09-26.json (frozen 2026-09-26 snapshot)",
   "train": [
     {
       "label": "suffix-only: Kütüphanedeki Ceset",

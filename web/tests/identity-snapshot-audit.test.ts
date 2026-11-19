@@ -7,7 +7,7 @@ import { auditIdentitySnapshot } from '../scripts/audit-identity-snapshot.ts';
 import type { EventRecord } from '../lib/types.ts';
 
 const events = JSON.parse(
-  await readFile(new URL('../data/events.json', import.meta.url), 'utf8'),
+  await readFile(new URL('./fixtures/events-2026-09-26.json', import.meta.url), 'utf8'),
 ) as EventRecord[];
 
 void test('identity module keeps every legacy merge and never joins one provider twice', () => {
