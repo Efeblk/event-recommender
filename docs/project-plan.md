@@ -245,3 +245,9 @@ and English, plan an evening and save it. The final demo runs on that URL.
   Turkish test: refused by the hourly rate limit.
 - 2026-11-19: Agent tools now give the model Istanbul local times. Result:
   877 + 2 web tests and the 36-case recorded agent evaluation pass.
+- 2026-11-19: PR #29 merged and deployed. Live English test: correct Istanbul
+  times. Live Turkish test ("Kadıköy veya Beşiktaş"): search_events returned
+  "needs_input" for two districts. The agent searched all of Istanbul instead,
+  said that the two districts had no events and named districts that no tool
+  returned. Local searches for each district return 7 (Kadıköy) and 3
+  (Beşiktaş) events. Fix: the instruction now asks for one search per district.
