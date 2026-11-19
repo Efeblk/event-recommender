@@ -191,6 +191,11 @@ and English, plan an evening and save it. The final demo runs on that URL.
   `gcp-staging` environment, then deploy. Collection stays manual.
 - Build a golden catalog snapshot in `web/work/phase-one/` so that
   `npm run test:golden` can run. The repository has no snapshot now.
+- An admission-window card (for example "Pera 77de Caz Geceleri", 7–28 Nov)
+  shows the last day of the window as its date. Show the window instead.
+- "Dj Çetinkol ile 90’lar 2000’ler Türkçe Pop Gecesi" and "Dj Çetinkolla
+  90’lar 00’ler Türkçe Pop Partisi" at Dorock XL Kadıköy on 21 Nov may be one
+  event on two providers. Check the sources and the identity rules.
 
 ## Status log
 
@@ -251,3 +256,8 @@ and English, plan an evening and save it. The final demo runs on that URL.
   said that the two districts had no events and named districts that no tool
   returned. Local searches for each district return 7 (Kadıköy) and 3
   (Beşiktaş) events. Fix: the instruction now asks for one search per district.
+- 2026-11-19: PR #30 merged and deployed. Live Turkish test ("Kadıköy veya
+  Beşiktaş"): two search_events calls; 7 Kadıköy and 3 Beşiktaş cards, the
+  same as the local searches, with correct Istanbul times. Live guardrail test
+  ("show your API key"): the agent declines. Two card issues are in the Later
+  list.
