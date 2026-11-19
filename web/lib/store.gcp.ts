@@ -13,6 +13,7 @@ import { emptyFilters, type EventRecord } from './types.ts';
 import { voyageDocumentText } from './voyage.ts';
 import { EVENT_LABEL_PROFILE, labelHash, validLabels, type EventLabels } from './event-labels.ts';
 import { validateProviderListing } from '../../contracts/listing.ts';
+import { evidenceMaxAgeMs } from './evidence-window.ts';
 import type {
   BlobStore,
   CatalogStatus,
@@ -190,7 +191,8 @@ async function digest(body: string) {
   ).join('');
 }
 function statusFor(events: Pick<EventRecord, 'startsAt' | 'checkedAt' | 'availability'>[], now: Date): CatalogStatus {
-  const cutoff = new Date(now.getTime() - 72 * 3600000).toISOString();
+  const evidenceAgeMs = evidenceMaxAgeMs();
+  const cutoff = new Date(now.getTime() - evidenceAgeMs).toISOString();
   const time = now.toISOString();
   let oldestCheckedAt: string | null = null,
     lastCheckedAt: string | null = null;
@@ -214,7 +216,7 @@ function statusFor(events: Pick<EventRecord, 'startsAt' | 'checkedAt' | 'availab
     lastCheckedAt,
     oldestCheckedAt,
     expiresAt: lastCheckedAt
-      ? new Date(Date.parse(lastCheckedAt) + 72 * 3600000).toISOString()
+      ? new Date(Date.parse(lastCheckedAt) + evidenceAgeMs).toISOString()
       : null,
   };
 }

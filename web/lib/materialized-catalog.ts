@@ -24,12 +24,11 @@ import {
   hasExplicitSameEventSoldOutConflict,
   hasExplicitSameEventVenueConflict,
 } from '../../contracts/source-evidence.ts';
+import { evidenceMaxAgeMs } from './evidence-window.ts';
 
 export interface SearchCatalog {
   schemaVersion: 1;
   materializedAt: string;
-  /** A bundled snapshot keeps its recorded source evidence until the next deploy. */
-  evidenceMode?: 'snapshot';
   sourceStatus: Pick<EventRecord, 'startsAt' | 'checkedAt' | 'availability'>[];
   groups: { versions: { from: number; events: EventRecord[] }[] }[];
 }
@@ -331,11 +330,8 @@ function ambiguousSourceEvidenceIds(events: EventRecord[]): Set<string> {
 export function buildSearchCatalog(
   events: EventRecord[],
   at: Date,
-  options: { evidenceMode?: 'snapshot' } = {},
 ): SearchCatalog {
-  const eligibility = {
-    allowStaleEvidence: options.evidenceMode === 'snapshot',
-  };
+  const evidenceAgeMs = evidenceMaxAgeMs();
   const eligible: EventRecord[] = [];
   const ambiguousEvidence = ambiguousSourceEvidenceIds(events);
   let projectionBytes = 0;
@@ -360,7 +356,7 @@ export function buildSearchCatalog(
     const activation = Math.max(at.getTime(), checked - 300000);
     if (
       !Number.isFinite(activation) ||
-      !isEligible(event, emptyFilters, new Date(activation), eligibility)
+      !isEligible(event, emptyFilters, new Date(activation))
     )
       continue;
     eligible.push(event);
@@ -371,9 +367,7 @@ export function buildSearchCatalog(
       const checked = Date.parse(member.checkedAt);
       for (const boundary of [
         checked - 300000,
-        ...(options.evidenceMode === 'snapshot'
-          ? []
-          : [checked + 72 * 3600000 + 1]),
+        checked + evidenceAgeMs + 1,
         Date.parse(member.startsAt) + 1,
       ])
         if (boundary > at.getTime()) boundaries.add(boundary);
@@ -382,7 +376,7 @@ export function buildSearchCatalog(
     let previous = '';
     for (const from of [...boundaries].sort((a, b) => a - b)) {
       const active = members.filter((event) =>
-        isEligible(event, emptyFilters, new Date(from), eligibility),
+        isEligible(event, emptyFilters, new Date(from)),
       );
       const resolution = resolveEventRecordIdentity(active);
       const byId = new Map(active.map((event) => [event.id, event]));
@@ -432,7 +426,6 @@ export function buildSearchCatalog(
   return {
     schemaVersion: 1,
     materializedAt: at.toISOString(),
-    ...(options.evidenceMode ? { evidenceMode: options.evidenceMode } : {}),
     groups,
     sourceStatus: events.map(({ startsAt, checkedAt, availability }) => ({
       startsAt,
@@ -459,9 +452,7 @@ export function searchCatalogCandidates(
         selected = version.events;
       }
       return selected.filter((event) =>
-        isEligible(event, filters, at, {
-          allowStaleEvidence: catalog.evidenceMode === 'snapshot',
-        }),
+        isEligible(event, filters, at),
       );
     })
     .sort(

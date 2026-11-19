@@ -12,6 +12,7 @@ import {
   categoryForEvent,
   categoryFromSource,
 } from '../../contracts/category.ts';
+import { evidenceMaxAgeMs } from './evidence-window.ts';
 export const MAX_SOURCE_PAGE_EVENTS = 1000;
 export const MAX_IMPORT_ENVELOPE_EVENTS = 2000;
 export const MAX_EVENT_PRICE = Number.MAX_SAFE_INTEGER / 100;
@@ -137,6 +138,7 @@ export function validateImport(
   value: unknown,
   now = new Date(),
 ): SourcePage[] {
+  const evidenceAgeMs = evidenceMaxAgeMs();
   const payload = value as { schemaVersion?: unknown; pages?: unknown } | null;
   if (
     !payload ||
@@ -170,13 +172,13 @@ export function validateImport(
         const stamp = typeof page.quarantinedAt === 'string' ? Date.parse(page.quarantinedAt) : NaN;
         if (!isSourceQuarantineReason(page.quarantineReason) || !Number.isFinite(stamp) ||
             new Date(stamp).toISOString() !== page.quarantinedAt || stamp > now.getTime() + 300000 ||
-            stamp < now.getTime() - 72 * 3600000)
+            stamp < now.getTime() - evidenceAgeMs)
           throw new Error('Invalid source quarantine');
         return { url, events: [], quarantinedAt: page.quarantinedAt as string, quarantineReason: page.quarantineReason };
       }
       const retired = typeof page.retiredAt === 'string' ? Date.parse(page.retiredAt) : NaN;
       if (!Number.isFinite(retired) || new Date(retired).toISOString() !== page.retiredAt ||
-          retired > now.getTime() + 300000 || retired < now.getTime() - 72 * 3600000)
+          retired > now.getTime() + 300000 || retired < now.getTime() - evidenceAgeMs)
         throw new Error('Invalid source retirement');
       return { url, events: [], retiredAt: page.retiredAt as string };
     }
@@ -241,7 +243,7 @@ export function validateImport(
         !Number.isFinite(checked) ||
         new Date(checked).toISOString() !== e.checkedAt ||
         checked > now.getTime() + 300000 ||
-        checked < now.getTime() - 72 * 3600000
+        checked < now.getTime() - evidenceAgeMs
       )
         throw new Error('Invalid event freshness');
       if (

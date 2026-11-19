@@ -4,6 +4,7 @@ const card = {
   id: 'event-1',
   title: 'Gece Cazı',
   startsAt: '2026-10-03T17:00:00.000Z',
+  checkedAt: '2026-10-02T11:05:00.000Z',
   venue: 'Sahne İstanbul',
   district: 'Kadıköy',
   address: 'Kadıköy, İstanbul',
@@ -42,6 +43,7 @@ test.describe('plan assistant', () => {
     await expect(page.getByText('Gece Cazı cumartesi akşamı için uygun.')).toBeVisible();
     await expect(page.getByText('Etkinlikler aranıyor')).toBeVisible();
     await expect(page.getByRole('heading', { name: 'Gece Cazı' })).toBeVisible();
+    await expect(page.getByText(/Kontrol edildi: 2 Eki/)).toBeVisible();
     await expect(page.getByRole('link', { name: /Bubilet/ })).toHaveAttribute('href', card.url);
 
     await page.getByLabel('Mesajın').fill('daha ucuz olsun');

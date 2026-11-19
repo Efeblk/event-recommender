@@ -15,7 +15,7 @@ function event(overrides: Partial<EventRecord> = {}): EventRecord {
     title: 'Sample Concert',
     description: 'A recorded concert listing.',
     startsAt: '2026-12-01T17:00:00.000Z',
-    checkedAt: '2026-09-24T06:00:00.000Z',
+    checkedAt: '2026-11-17T09:00:00.000Z',
     venue: 'Sample Hall',
     city: 'İstanbul',
     district: 'Kadıköy',
@@ -35,7 +35,7 @@ void test('tracked bundled catalog has the expected source record count', () => 
   assert.equal(bundledEventCount(), 4076);
 });
 
-void test('bundled backend prepares stale snapshot evidence and deduplicates sessions', async () => {
+void test('bundled backend uses the evidence window and deduplicates sessions', async () => {
   const store = createBundledStore(
     [
       event(),
@@ -59,10 +59,13 @@ void test('bundled backend prepares stale snapshot evidence and deduplicates ses
     status: 'ready',
     stored: 2,
     eligible: 1,
-    lastCheckedAt: '2026-09-24T06:00:00.000Z',
-    oldestCheckedAt: '2026-09-24T06:00:00.000Z',
-    expiresAt: null,
+    lastCheckedAt: '2026-11-17T09:00:00.000Z',
+    oldestCheckedAt: '2026-11-17T09:00:00.000Z',
+    expiresAt: '2026-11-20T09:00:00.000Z',
   });
+  const staleAt = new Date('2026-11-20T09:00:00.001Z');
+  assert.deepEqual(await store.candidates(emptyFilters, staleAt), []);
+  assert.equal((await store.catalogStatus(staleAt)).status, 'stale');
 });
 
 void test('bundled backend refuses catalog writes', async () => {

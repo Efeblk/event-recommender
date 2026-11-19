@@ -9,6 +9,7 @@ import {
 } from '@google/adk';
 import type { AgentModelConfig } from './config.ts';
 import { agentInstruction } from './instruction.ts';
+import type { SupportedLanguage } from '../lib/language.ts';
 
 export const AGENT_APP_NAME = 'event-rec';
 /** Session owner for visitors who are not signed in. Firebase IDs never contain ':'. */
@@ -22,13 +23,18 @@ export function geminiModel(config: AgentModelConfig): BaseLlm {
   );
 }
 
-export function createAgent(options: { model: BaseLlm; tools: BaseTool[]; now?: () => Date }) {
+export function createAgent(options: {
+  model: BaseLlm;
+  tools: BaseTool[];
+  now?: () => Date;
+  language?: SupportedLanguage;
+}) {
   const now = options.now ?? (() => new Date());
   return new LlmAgent({
     name: 'event_rec_planner',
     description: 'Plans Istanbul outings from checked, bookable events.',
     model: options.model,
-    instruction: () => agentInstruction(now()),
+    instruction: () => agentInstruction(now(), options.language),
     tools: options.tools,
   });
 }

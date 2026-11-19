@@ -47,8 +47,9 @@ export function searchEventsResult(result: SearchResult, request = '') {
     events,
     response: {
       status: result.status,
-      notice: result.notice,
-      clarification: result.clarification ?? [],
+      reason:
+        result.pendingInput?.reason ??
+        (result.status === 'unsupported_location' ? 'unsupported_location' : null),
       totalCandidates: result.totalCandidates,
       ...(forChildren ? { ageGuard: 'removed sessions with an age limit above children' } : {}),
       events: events.map(eventFacts),

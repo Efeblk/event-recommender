@@ -80,7 +80,7 @@ Configure Gemini with one of these:
   `GOOGLE_CLOUD_LOCATION` (default `us-central1`) for Vertex AI with
   Application Default Credentials.
 
-`EVENT_REC_AGENT_MODEL` selects the model (default `gemini-2.5-flash`). Without
+`EVENT_REC_AGENT_MODEL` selects the model (default `gemini-3.5-flash-lite`). Without
 Gemini settings, `/api/agent` returns 503 with code `agent_unavailable`.
 Each turn has a 60 s limit and at most 8 model calls. The route uses the same
 body limit, visitor rate limit, daily AI limit and catalog check as search.
@@ -214,8 +214,11 @@ Set `EVENT_REC_CATALOG`, `DEPLOYMENT_ENV`, `GEMINI_API_KEY`,
 `EVENT_REC_GCP_PROJECT`, `GOOGLE_SERVICE_ACCOUNT_JSON_BASE64`,
 `FIREBASE_WEB_API_KEY`, `FIREBASE_PROJECT_ID` and `FIREBASE_AUTH_DOMAIN` in
 Vercel. Set `AI_DAILY_LIMIT` if the default limit of 25 is not suitable. The
-optional settings are `FIRESTORE_DATABASE`, `EVENT_REC_AGENT_MODEL` and
-`GOOGLE_MAPS_API_KEY`. Do not set `GCP_STORAGE_BUCKET` for the bundled demo.
+optional settings are `FIRESTORE_DATABASE`, `EVENT_REC_AGENT_MODEL`,
+`EVENT_REC_EVIDENCE_MAX_HOURS` and `GOOGLE_MAPS_API_KEY`.
+`EVENT_REC_EVIDENCE_MAX_HOURS` accepts an integer from 1 through 720. It is 72
+by default. Invalid values use 72. Do not set `GCP_STORAGE_BUCKET` for the
+bundled demo.
 
 Before deployment, run these offline checks from `web/`:
 

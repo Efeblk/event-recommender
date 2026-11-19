@@ -237,6 +237,9 @@ Set these Vercel environment variables:
 - `FIREBASE_PROJECT_ID`: Firebase Auth token audience and issuer project.
 - `FIREBASE_AUTH_DOMAIN`: Public Firebase Auth domain.
 - `EVENT_REC_AGENT_MODEL`: Optional Gemini model override.
+- `EVENT_REC_EVIDENCE_MAX_HOURS`: Maximum source evidence age in hours. It
+  accepts an integer from 1 through 720. The default is 72. Invalid values use
+  72.
 - `GOOGLE_MAPS_API_KEY`: Optional Routes API key. Omit it for the free demo.
 
 The function loads and materializes the bundled catalog once per warm

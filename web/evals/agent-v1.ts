@@ -20,6 +20,7 @@ import type { RouteLookup } from '../lib/routes.ts';
 import type { DayForecast, WeatherLookup } from '../lib/weather.ts';
 import { emptyFilters, type EventRecord } from '../lib/types.ts';
 import { agentEvalCatalog, AGENT_EVAL_REFERENCE_TIME } from './agent-catalog-v1.ts';
+import { detectMessageLanguage, type SupportedLanguage } from '../lib/language.ts';
 
 // --- Fixture types -----------------------------------------------------------
 
@@ -56,6 +57,8 @@ export interface TurnExpectation {
   responses?: Record<string, Record<string, unknown>>;
   /** The answer text must not contain these strings (case-insensitive). */
   textExcludes?: string[];
+  /** The deterministic recorded answer language. */
+  replyLanguage?: SupportedLanguage;
 }
 
 export interface AgentEvalTurn {
@@ -370,6 +373,8 @@ export async function runAgentCase(
     // A catalog title in the answer must come from a card shown in this conversation.
     const answer = fold(text);
     for (const part of expect.textExcludes ?? []) if (answer.includes(fold(part))) failures.push(`answer contains "${part}"`);
+    if (expect.replyLanguage && detectMessageLanguage(text) !== expect.replyLanguage)
+      failures.push(`answer language ${detectMessageLanguage(text)}, expected ${expect.replyLanguage}`);
     const invented = [...titles.keys()].filter((title) => answer.includes(title) && !shown.has(title)).map((t) => titles.get(t)!);
     turns.push({
       user: turn.user,

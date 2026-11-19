@@ -59,6 +59,14 @@ const formatShortDate = (date: string) =>
     day: 'numeric',
     month: 'short',
   }).format(new Date(date));
+const formatCheckedAt = (date: string) =>
+  new Intl.DateTimeFormat('tr-TR', {
+    timeZone: 'Europe/Istanbul',
+    day: 'numeric',
+    month: 'short',
+    hour: '2-digit',
+    minute: '2-digit',
+  }).format(new Date(date));
 const formatMoney = (price: number, currency = 'TRY') =>
   new Intl.NumberFormat('tr-TR', {
     style: 'currency',
@@ -119,6 +127,11 @@ function EventCard({ event }: { event: EventRecord }) {
             {event.district ? ` · ${event.district}` : ''}
           </span>
         </p>
+        {event.checkedAt && Number.isFinite(Date.parse(event.checkedAt)) ? (
+          <p className="event-checked">
+            Kontrol edildi: {formatCheckedAt(event.checkedAt)}
+          </p>
+        ) : null}
         {hasMultipleOffers ? (
           <div className="event-actions event-offers">
             <span className="offers-label">Bilet seçenekleri</span>
