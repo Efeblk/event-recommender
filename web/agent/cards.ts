@@ -22,6 +22,33 @@ export interface AgentEventCard {
 
 const SUMMARY_CHARS = 280;
 
+const ISTANBUL_TIME = new Intl.DateTimeFormat('en-GB', {
+  timeZone: 'Europe/Istanbul',
+  weekday: 'short',
+  year: 'numeric',
+  month: '2-digit',
+  day: '2-digit',
+  hour: '2-digit',
+  minute: '2-digit',
+  hourCycle: 'h23',
+});
+
+/**
+ * Istanbul wall-clock time for model-facing tool results, for example
+ * "Fri 2026-11-20 20:30". The model must not convert UTC itself.
+ */
+export function istanbulTime(iso: string): string;
+export function istanbulTime(iso: string | null): string | null;
+export function istanbulTime(iso: string | null): string | null {
+  if (iso === null) return null;
+  const time = Date.parse(iso);
+  if (!Number.isFinite(time)) return iso;
+  const part = Object.fromEntries(
+    ISTANBUL_TIME.formatToParts(new Date(time)).map(({ type, value }) => [type, value]),
+  );
+  return `${part.weekday} ${part.year}-${part.month}-${part.day} ${part.hour}:${part.minute}`;
+}
+
 export function eventCard(event: EventRecord): AgentEventCard {
   const price = event.advertisedPrice?.amount ?? event.price;
   return {
@@ -54,7 +81,7 @@ export function eventFacts(event: EventRecord) {
   return {
     id: event.id,
     title: event.title,
-    startsAt: event.startsAt,
+    startsAt: istanbulTime(event.startsAt),
     venue: event.venue,
     district: event.district,
     category: event.category,

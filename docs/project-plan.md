@@ -237,3 +237,11 @@ and English, plan an evening and save it. The final demo runs on that URL.
   Result: 2914 sessions from Biletinial, Bubilet and Biletix. All sessions
   have a source check from the last 72 hours. 2871 sessions are in the future.
   The run stopped at the raw storage budget (1490 of 2000 detail pages).
+- 2026-11-19: PR #28 merged and deployed the refreshed catalog. Result:
+  `/api/health` reports 2914 stored and 2598 eligible sessions; the catalog
+  expires on 2026-12-02. Vercel CLI uploads now use `--archive=tgz` because
+  the free plan allows 5000 file uploads per day. Live English test: three
+  correct stand-up cards, but the reply gave UTC times as local times. Live
+  Turkish test: refused by the hourly rate limit.
+- 2026-11-19: Agent tools now give the model Istanbul local times. Result:
+  877 + 2 web tests and the 36-case recorded agent evaluation pass.
