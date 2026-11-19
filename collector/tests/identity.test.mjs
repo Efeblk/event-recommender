@@ -10,7 +10,7 @@ const fixture = JSON.parse(
   await readFile(new URL("./fixtures/identity-pairs.v1.json", import.meta.url), "utf8"),
 );
 const snapshot = JSON.parse(
-  await readFile(new URL("../../web/data/events.json", import.meta.url), "utf8"),
+  await readFile(new URL("../../web/tests/fixtures/events-2026-09-26.json", import.meta.url), "utf8"),
 );
 
 function listing(overrides = {}) {

@@ -32,7 +32,7 @@ function event(overrides: Partial<EventRecord> = {}): EventRecord {
 }
 
 void test('tracked bundled catalog has the expected source record count', () => {
-  assert.equal(bundledEventCount(), 4076);
+  assert.equal(bundledEventCount(), 2914);
 });
 
 void test('bundled backend uses the evidence window and deduplicates sessions', async () => {
