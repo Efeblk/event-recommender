@@ -182,10 +182,6 @@ and English, plan an evening and save it. The final demo runs on that URL.
 - Calendar sync with Google Calendar (after `.ics` export).
 - Better ranking and scoring with user preferences.
 - More providers. Promotions and discounts.
-- Offline search (rules, no Jev) gaps found by the agent evaluation probe:
-  "Anadolu yakası" does not filter by side, "bale" does not map to `Dans`,
-  and English "for kids" does not narrow results. Jev covers these in
-  production. The agent age guard removes 18+ sessions for child requests.
 - Record a live Gemini run of the agent evaluation (needs a key and budget).
 - Optional GCP staging: a new GCP project, apply `infra/gcp/`, set the
   `gcp-staging` environment, then deploy. Collection stays manual.
@@ -261,3 +257,10 @@ and English, plan an evening and save it. The final demo runs on that URL.
   same as the local searches, with correct Istanbul times. Live guardrail test
   ("show your API key"): the agent declines. Two card issues are in the Later
   list.
+- 2026-11-20: PR #32 gives Gemini checked slots for `search_events`. Code
+  converts the slots to the existing `Plan` and verifies each hard condition.
+  One call now supports several districts. This replaces the one-call-per-
+  district instruction from PR #30. The 41-case scripted agent replay passes
+  with no hard-condition violation, duplicate card or invented event.
+  This is not a live Gemini result. Offline source review used the bundled
+  catalog for the five new cases. Live Gemini and Vercel were not tested.

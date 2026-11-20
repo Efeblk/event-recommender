@@ -7,7 +7,7 @@ import {
   runtime,
   type RateLimitResult,
 } from '@/lib/store';
-import { recommendRequest } from '@/lib/recommend';
+import { recommendPlan, recommendRequest } from '@/lib/recommend';
 import { searchDependencies } from '@/lib/search-deps';
 import { catalogAllowsRecommendations } from '@/lib/catalog-readiness';
 import { consumeBuckets, userLimitBuckets, visitorRateLimitEnabled } from '@/lib/rate-limit';
@@ -105,6 +105,8 @@ export async function POST(request: Request) {
       tools: {
         search: (message) =>
           recommendRequest({ message }, searchDependencies({ now: new Date(), signal })),
+        searchPlan: (message, plan) =>
+          recommendPlan(message, plan, searchDependencies({ now: new Date(), signal })),
         lookup: async (ids) =>
           findEvents(await candidates(emptyFilters), ids).map(publicEventRecord),
         route: routeLookup(),

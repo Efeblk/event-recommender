@@ -396,7 +396,7 @@ export async function recommend(
   return { ...result, intentState, excludedIds: excludeIds };
 }
 
-async function recommendResolved(
+export async function recommendResolved(
   input: RecommendInput,
   deps: Dependencies,
   intent?: IntentState,
@@ -704,6 +704,22 @@ async function recommendResolved(
     totalCandidates,
     diagnostics,
   };
+}
+
+/** Runs the checked search pipeline with an already resolved and validated plan. */
+export function recommendPlan(
+  request: string,
+  plan: Plan,
+  deps: Dependencies,
+): Promise<SearchResult> {
+  validateSearchPlan(plan);
+  return recommendResolved(
+    validateInput({ message: request }),
+    deps,
+    undefined,
+    plan,
+    [request],
+  );
 }
 
 const budgetBasisChoices = [

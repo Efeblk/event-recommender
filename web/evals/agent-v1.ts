@@ -14,7 +14,7 @@ import { findEvents } from '../agent/tools/event-details.ts';
 import type { AgentStreamEvent } from '../agent/turn.ts';
 import type { AgentEventCard } from '../agent/cards.ts';
 import { buildSearchCatalog, searchCatalogCandidates } from '../lib/materialized-catalog.ts';
-import { recommendRequest } from '../lib/recommend.ts';
+import { recommendPlan, recommendRequest } from '../lib/recommend.ts';
 import { createUserStore, memoryDocuments } from '../lib/user-store.ts';
 import type { RouteLookup } from '../lib/routes.ts';
 import type { DayForecast, WeatherLookup } from '../lib/weather.ts';
@@ -293,6 +293,12 @@ export function agentEvalWorld(now = new Date(AGENT_EVAL_REFERENCE_TIME)) {
         { message: request },
         { config: null, now, candidates: async (filters) => searchCatalogCandidates(catalog, filters, now) },
       ),
+    searchPlan: (request: string, plan: Parameters<typeof recommendPlan>[1]) =>
+      recommendPlan(
+        request,
+        plan,
+        { config: null, now, candidates: async (filters) => searchCatalogCandidates(catalog, filters, now) },
+      ),
     lookup: async (ids: string[]) => findEvents(eligible, ids),
   };
 }
@@ -323,6 +329,10 @@ export async function runAgentCase(
         search: (request) => {
           searches.push(request);
           return world.search(request);
+        },
+        searchPlan: (request, plan) => {
+          searches.push(request);
+          return world.searchPlan(request, plan);
         },
         lookup: world.lookup,
         route: fakeRoute,
