@@ -56,9 +56,10 @@ Never put secrets in chat, Git, a build artifact or a public environment variabl
 
 ## Plan assistant
 
-Open **/plan** for the chat. `POST /api/agent` takes `{ sessionId, message }`
-and streams newline-delimited JSON events: `tool`, `cards`, `text`, `error`
-and `done`. Cards come only from tool results. Model text cannot create cards.
+Open `/` for the Plan asistanı chat. The old `/plan` URL redirects to `/`.
+`POST /api/agent` takes `{ sessionId, message }` and streams newline-delimited
+JSON events: `tool`, `cards`, `text`, `error` and `done`. The chat shows cards
+only from tool results.
 
 The root ADK `LlmAgent` (`web/agent/agent.ts`) uses Gemini and these tools:
 
@@ -121,9 +122,8 @@ Failed providers or missing vectors retain an explicit word-matching fallback.
 Unknown prices and policies do not satisfy hard constraints.
 Provider starting prices do not prove checkout totals or remaining stock.
 
-Each search uses only the current message. Earlier requests do not affect it.
-The interface has event cards, a support placeholder and reserved advertising areas.
-There are no user accounts, payments or permanent user profiles.
+`/api/recommend` processes each message independently. The Plan assistant
+uses its conversation history to carry forward search conditions.
 
 Use [merge rules](web/docs/event-merging.md), [Jev checks](web/docs/jev-evaluation.md)
 and [Voyage retrieval](web/docs/voyage-retrieval.md) for implementation details.

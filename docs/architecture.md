@@ -55,8 +55,9 @@ Manual collector run → tracked catalog snapshot
 - A request-only call uses the old parser path. This keeps old recordings and
   callers compatible. The agent instruction requires structured slots for new
   calls that contain checkable conditions.
-- `/api/agent` streams agent events. The UI renders text from the model and
-  renders event cards only from tool results.
+- The Plan assistant at `/` sends chat messages to `/api/agent`. The old
+  `/plan` URL redirects to `/`. The API streams agent events. The chat shows
+  model text and renders event cards only from tool results.
 - Guardrails: message length and rate limits before the agent runs, schema
   checks on every tool call, user ID checks on write tools, provider text
   treated as data, and secrets only from runtime environment settings.
@@ -101,7 +102,7 @@ holds source records before that preparation.
 `web/app/api/recommend/route.ts` runs `recommendRequest` in `web/lib/recommend.ts`.
 The API reads only `message`. It ignores legacy history, state, filters,
 clarification text and excluded IDs. The server selects the parser protocol.
-Every request starts a new plan. The page sends only the current message.
+Every request to `/api/recommend` starts a new search plan.
 
 `/api/agent` has a separate input boundary. Gemini fills the `search_events`
 slots from the whole ADK conversation. Follow-up calls carry forward conditions
@@ -149,7 +150,7 @@ During an approved staging test (`EVENT_REC_PREVIEW_TESTING=true`),
 `web/lib/request-log.ts` stores each search as one object under
 `event-rec/staging/requestLog/<UTC day>/` in the collection bucket: the request,
 the field reader's judgments, the plan and the returned
-event IDs. It stores no IP address or identifier. The page tells testers.
+event IDs. It stores no IP address or identifier.
 These entries are the evaluation and training data for the request parser.
 
 Search consumes the prepared catalog. It does not collect provider pages or

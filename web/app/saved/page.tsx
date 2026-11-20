@@ -82,7 +82,7 @@ export default function SavedPage() {
           event recommender<span>✳</span>
         </Link>
         <nav aria-label="Ana menü">
-          <Link href="/plan">Plan asistanı</Link>
+          <Link href="/">Plan asistanı</Link>
           <Link href="/saved" aria-current="page">
             Kayıtlarım
           </Link>
