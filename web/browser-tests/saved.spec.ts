@@ -11,12 +11,18 @@ test.describe('saved plans', () => {
     );
     await page.goto('/saved');
     await expect(page.getByRole('heading', { name: 'Kayıtlarım' })).toBeVisible();
+    const nav = page.getByRole('navigation', { name: 'Ana menü' });
+    const assistant = nav.getByRole('link', { name: 'Plan asistanı' });
+    await expect(assistant).toHaveAttribute('href', '/');
     await expect(page.getByText('Giriş bu sunucuda kapalı.')).toBeVisible();
     await expect(page.getByRole('button', { name: /Google/ })).toHaveCount(0);
+    await assistant.click();
+    await expect(page).toHaveURL('/');
+    await expect(page.getByRole('heading', { name: 'Plan asistanı' })).toBeVisible();
   });
 
   test('the plan assistant hides sign-in and favorites without Firebase settings', async ({ page }) => {
-    await page.goto('/plan');
+    await page.goto('/');
     await expect(page.getByRole('heading', { name: 'Plan asistanı' })).toBeVisible();
     await expect(page.getByRole('link', { name: 'Kayıtlarım' })).toHaveCount(0);
     await expect(page.getByRole('button', { name: /Google/ })).toHaveCount(0);

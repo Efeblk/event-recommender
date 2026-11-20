@@ -40,7 +40,7 @@ test.describe('plan assistant', () => {
         ]),
       });
     });
-    await page.goto('/plan');
+    await page.goto('/');
     await page.getByLabel('Mesajın').fill('Cumartesi Kadıköy konser');
     await page.getByRole('button', { name: 'Gönder' }).click();
     await expect(
@@ -74,7 +74,7 @@ test.describe('plan assistant', () => {
         body: JSON.stringify({ code: 'agent_unavailable', error: 'x' }),
       }),
     );
-    await page.goto('/plan');
+    await page.goto('/');
     await page.getByLabel('Mesajın').fill('konser');
     await page.getByRole('button', { name: 'Gönder' }).click();
     await expect(page.getByRole('alert')).toHaveText(
@@ -95,7 +95,7 @@ test.describe('plan assistant', () => {
         body: ndjson([{ type: 'text', text: 'Tamam.' }, { type: 'done' }]),
       });
     });
-    await page.goto('/plan');
+    await page.goto('/');
     await page.getByLabel('Mesajın').fill('konser');
     await page.keyboard.press('Enter');
     await expect(page.getByText('Tamam.')).toBeVisible();
@@ -124,7 +124,7 @@ test.describe('plan assistant', () => {
         ]),
       }),
     );
-    await page.goto('/plan');
+    await page.goto('/');
     await page.getByLabel('Mesajın').fill('Find jazz events');
     await page.getByRole('button', { name: 'Gönder' }).click();
 
@@ -139,27 +139,59 @@ test.describe('plan assistant', () => {
     await expect(answer.locator('script, b')).toHaveCount(0);
   });
 
-  test('keeps the plan link visible on a narrow home page', async ({
-    page,
-  }) => {
+  test('waits for hydration before enabling the composer', async ({ page }) => {
+    let releaseScripts!: () => void;
+    const scriptsReleased = new Promise<void>((resolve) => {
+      releaseScripts = resolve;
+    });
+    let sawScript!: () => void;
+    const scriptRequested = new Promise<void>((resolve) => {
+      sawScript = resolve;
+    });
+
+    await page.route('**/_next/static/**/*.js', async (route) => {
+      sawScript();
+      await scriptsReleased;
+      await route.continue();
+    });
+
+    const navigation = page.goto('/', { waitUntil: 'commit' });
+    const message = page.getByRole('textbox', { name: 'Mesajın' });
+    const send = page.getByRole('button', { name: 'Gönder' });
+    const restart = page.getByRole('button', { name: 'Yeni sohbet' });
+    try {
+      await navigation;
+      await scriptRequested;
+      await expect(message).toBeDisabled();
+      await expect(send).toBeDisabled();
+      await expect(restart).toBeDisabled();
+    } finally {
+      releaseScripts();
+    }
+
+    await expect(message).toBeEnabled();
+    await expect(send).toBeEnabled();
+    await expect(restart).toBeEnabled();
+  });
+
+  test('keeps navigation and the composer visible at 390px', async ({ page }) => {
     await page.setViewportSize({ width: 390, height: 844 });
-    await page.route('**/api/events', (route) =>
-      route.fulfill({
-        json: {
-          events: [],
-          total: 0,
-          aiEnabled: false,
-          catalog: { status: 'ready', stored: 0, eligible: 0 },
-        },
-      }),
-    );
-    await page.route('**/api/site', (route) =>
-      route.fulfill({ json: { donationUrl: null } }),
-    );
     await page.goto('/');
-    const link = page.getByRole('link', { name: 'Plan asistanı' });
-    await expect(link).toBeVisible();
-    await expect(link).toHaveAttribute('href', '/plan');
+    const nav = page.getByRole('navigation', { name: 'Ana menü' });
+    const link = nav.getByRole('link', { name: 'Plan asistanı' });
+    await expect(link).toHaveAttribute('href', '/');
+    await expect(link).toHaveAttribute('aria-current', 'page');
     await expect(link).toBeInViewport();
+    await expect(page.getByRole('link', { name: 'Etkinlikler', exact: true })).toHaveCount(0);
+    await expect(page.getByRole('textbox', { name: 'Mesajın' })).toBeInViewport();
+    await expect(page.getByRole('button', { name: 'Gönder' })).toBeInViewport();
+    await expect(page.getByRole('button', { name: 'Yeni sohbet' })).toBeInViewport();
+  });
+
+  test('redirects the old /plan URL to the assistant', async ({ page }) => {
+    await page.goto('/plan');
+    await expect(page).toHaveURL('/');
+    await expect(page.getByRole('heading', { name: 'Plan asistanı' })).toBeVisible();
+    await expect(page.getByRole('textbox', { name: 'Mesajın' })).toBeEnabled();
   });
 });

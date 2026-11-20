@@ -15,7 +15,8 @@ done
 HOME_PAGE="$(curl --silent --fail --max-time 10 "http://127.0.0.1:$PORT/")"
 grep -q 'Plan' <<<"$HOME_PAGE"
 test "$(curl --silent --output /dev/null --write-out '%{http_code}' --max-time 10 "http://127.0.0.1:$PORT/api/health")" = 503
-test "$(curl --silent --output /dev/null --write-out '%{http_code}' --max-time 10 "http://127.0.0.1:$PORT/plan")" = 200
+test "$(curl --silent --output /dev/null --write-out '%{http_code}' --max-time 10 "http://127.0.0.1:$PORT/plan")" = 307
+test "$(curl --silent --location --output /dev/null --write-out '%{http_code}' --max-time 10 "http://127.0.0.1:$PORT/plan")" = 200
 STATUS="$(curl --silent --output /dev/null --write-out '%{http_code}' --max-time 10 -X POST -H 'Content-Type: application/json' \
   --data '{"sessionId":"smoke-session","message":"konser"}' "http://127.0.0.1:$PORT/api/agent")"
 test "$STATUS" = 503

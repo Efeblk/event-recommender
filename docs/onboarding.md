@@ -96,7 +96,7 @@ Read [the architecture](architecture.md) for the full request and data flow.
 |---|---|
 | `web/agent/` | The ADK agent: instruction, tools, planner, sessions, stream |
 | `web/lib/` | Search pipeline, catalog, auth, rate limits, user store |
-| `web/app/` | Pages: `/` (search), `/plan` (chat), `/saved` (saved plans) and API routes |
+| `web/app/` | Plan assistant at `/`, a redirect from `/plan` to `/`, saved plans and favorites at `/saved`, and API routes |
 | `web/components/` | UI components |
 | `web/tests/` | Unit tests (`node --test`) |
 | `web/browser-tests/` | Playwright browser tests with mocked APIs |
@@ -134,9 +134,9 @@ Read [the architecture](architecture.md) for the full request and data flow.
 
 5. Start the app: `npm run local:start` in `web/`, then open
    http://127.0.0.1:3001. Without GCP settings the page loads, but catalog
-   requests are not available. Without Gemini settings `/plan` returns
-   `agent_unavailable`. This is normal. Use the tests and the mocked browser
-   suite to work on behavior. The [README](../README.md) lists all settings.
+   requests are not available. Without Gemini settings, `/api/agent` returns
+   `agent_unavailable` when the user sends a chat message. Use the offline tests
+   and the mocked browser suite. The [README](../README.md) lists all settings.
 
 ## 7. How we work
 
