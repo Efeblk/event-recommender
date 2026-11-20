@@ -55,9 +55,14 @@ Sprint 4).
 - Show changes to `AGENTS.md` to the user before merge.
 - Use short sentences and active voice. Follow ASD-STE100 Simplified Technical English.
 - Keep technical names, commands, paths and quoted source text exact.
-- Use `gpt-6-astra` for substantial planning and difficult reasoning.
-- Use `gpt-5.6-sol` for implementation and tests.
+- Use `gpt-6.2-astra` or `gemini-4-neon` for substantial planning, difficult
+  reasoning and visual checks.
+- Use `gpt-6.2-sol` for implementation and tests.
+- Use `claude-haiku-5-5` for fast, lightweight subtasks (small lookups,
+  summaries and simple doc checks).
 - Handle trivial edits directly. Reuse existing findings.
+- Run independent read-only subagents in parallel. Keep write tasks serial on
+  the current branch.
 
 ## Verification
 
