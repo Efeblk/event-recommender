@@ -100,6 +100,7 @@ void test('attendee ages survive Turkish digits, words and English extraction/co
 void test('age admission uses explicit source rules and preserves unknown/conflicting/negated evidence', () => {
   const cases: [string, string][] = [
     ['Yaş sınırı: 6+', 'supported'], ['Yaş aralığı: 4–8', 'supported'], ['4-8 yaş arası çocuklara yöneliktir.', 'supported'],
+    ['4 yaş ve üzeri.', 'supported'],
     ['Suitable for children aged 6+', 'supported'], ['All ages', 'supported'], ['Her yaş için uygundur.', 'supported'],
     ['Yaş sınırı: 8+', 'contradicted'], ['+13 yaş sınırı vardır.', 'contradicted'], ['Adults only', 'contradicted'],
     ['Yaş sınırı: 6+. Yaş sınırı: 18+', 'unknown'], ['Not suitable for all ages.', 'unknown'], ['Her yaş için uygundur ifadesi geçerli değil.', 'unknown'],

@@ -1,5 +1,6 @@
 import type { BaseLlm, BaseSessionService } from '@google/adk';
 import type { EventRecord, SearchResult } from '../lib/types.ts';
+import type { Plan } from '../parser/contract.ts';
 import type { RouteLookup } from '../lib/routes.ts';
 import type { WeatherLookup } from '../lib/weather.ts';
 import type { UserStore } from '../lib/user-store.ts';
@@ -15,6 +16,7 @@ import { detectMessageLanguage } from '../lib/language.ts';
 
 export interface AgentToolDeps {
   search: (request: string) => Promise<SearchResult>;
+  searchPlan?: (request: string, plan: Plan) => Promise<SearchResult>;
   lookup: (ids: string[]) => Promise<EventRecord[]>;
   /** Null without a Maps key. plan_route then reports "unavailable". */
   route?: RouteLookup | null;
@@ -32,7 +34,7 @@ export function agentTools(
 ) {
   const planning = createPlanningTools({ lookup: deps.lookup, route: deps.route ?? null, showCards });
   return [
-    createSearchEventsTool({ search: deps.search, showCards }),
+    createSearchEventsTool({ search: deps.search, searchPlan: deps.searchPlan, showCards, now: deps.now }),
     createEventDetailsTool({ lookup: deps.lookup, showCards }),
     ...planning.tools,
     ...(deps.weather ? [createWeatherTool({ weather: deps.weather, now: deps.now })] : []),

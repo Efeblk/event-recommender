@@ -40,6 +40,21 @@ Manual collector run → tracked catalog snapshot
   refuses a plan with overlap or travel conflicts.
 - `web/lib/search-deps.ts` builds the search dependencies for both
   `/api/recommend` and `search_events`.
+- `search_events` keeps the user's complete words in `request`. Gemini also
+  sends checked slots for dates, times, places, categories, topics, budget,
+  audience, attendee ages and order. Included place and category lists use
+  OR. Excluded lists become `not` conditions. Code converts these slots to a
+  `Plan`, calls `validateSearchPlan`, and runs `recommendResolved`.
+- Slot dates use Europe/Istanbul and the next 120 days. Code rejects an unknown
+  place or category, a past date, a date outside the window, an invalid range,
+  and an incomplete budget. The tool returns `needs_input` with a reason. It
+  does not remove the invalid slot.
+- A neighborhood slot resolves to its checked district or side. `anadolu` and
+  `avrupa` resolve to the matching Istanbul side. Several districts use one
+  `any` condition and one catalog search.
+- A request-only call uses the old parser path. This keeps old recordings and
+  callers compatible. The agent instruction requires structured slots for new
+  calls that contain checkable conditions.
 - `/api/agent` streams agent events. The UI renders text from the model and
   renders event cards only from tool results.
 - Guardrails: message length and rate limits before the agent runs, schema
@@ -87,6 +102,11 @@ holds source records before that preparation.
 The API reads only `message`. It ignores legacy history, state, filters,
 clarification text and excluded IDs. The server selects the parser protocol.
 Every request starts a new plan. The page sends only the current message.
+
+`/api/agent` has a separate input boundary. Gemini fills the `search_events`
+slots from the whole ADK conversation. Follow-up calls carry forward conditions
+that still apply. Code, not Gemini text, decides catalog admission from the
+resulting `Plan`. Mood words stay in `request` for retrieval and ranking only.
 
 - `web/parser/reader-v3.ts` and `web/lib/span-interpreter.ts` interpret Turkish
   and English requests (`span-v2` plan protocol, `INPUT_READER=v3` by default;

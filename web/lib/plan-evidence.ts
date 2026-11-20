@@ -124,11 +124,19 @@ const labelEvidence = (...texts: Array<string | undefined>) =>
   texts.filter((text): text is string => Boolean(text));
 
 /** A child attends: children, family and child-age requests (R4 labels). */
-function childAudience(event: EventRecord) {
+function childAudience(event: EventRecord, companion: 'children' | 'family' = 'children') {
   const labels = event.labels;
   if (!labels) {
-    const check = checkPredicateEvidence(event, 'audience', 'family_friendly');
-    return result(check.status === 'supported' ? 'supported' : 'unknown', check.evidence);
+    const checks = [
+      checkPredicateEvidence(event, 'audience', companion === 'children' ? 'children' : 'family_friendly'),
+      ...(companion === 'family'
+        ? [checkPredicateEvidence(event, 'audience', 'children')]
+        : []),
+    ];
+    const supported = checks.find((check) => check.status === 'supported');
+    if (supported) return result('supported', supported.evidence);
+    const contradicted = checks.find((check) => check.status === 'contradicted');
+    return result(contradicted ? 'contradicted' : 'unknown', contradicted?.evidence ?? []);
   }
   const evidence = labelEvidence(labels.evidence.audience, labels.evidence.age);
   if (labels.audience === 'adult_only' || (labels.minAge !== null && labels.minAge >= 13))
@@ -325,7 +333,7 @@ function atomResult(
     case 'companion':
       // "With children" needs a child-suitable event; partner and friends are context.
       return atom.value === 'children' || atom.value === 'family'
-        ? childAudience(event)
+        ? childAudience(event, atom.value)
         : result('supported');
     case 'age':
       return ageResult(event, atom.years);

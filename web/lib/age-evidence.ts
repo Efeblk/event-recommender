@@ -27,6 +27,7 @@ export function checkAgeEvidence(event: EventRecord, years: number): {
   // A stated child/attendee age range or a stated lower-age suitability rule.
   for (const m of text.matchAll(/\b(\d{1,3})\s*[-–]\s*(\d{1,3})\s*yas(?:\s+arasi)?\s+(?:cocuk(?:lar|lara)?|izleyici(?:ler|lere)?|katilimci(?:lar|lara)?)\s+(?:icin(?:dir)?|yonelik(?:tir)?|uygun(?:dur)?|onerilir|katilabilir)/gu)) add(m, Number(m[1]), Number(m[2]));
   for (const m of text.matchAll(/\b(\d{1,3})\s*(?:yas\s*(?:ve uzeri|ustu)|\+)\s+(?:(?:olan|tum)\s+)?(?:(?:cocuk(?:lar|lara)?|izleyici(?:ler|lere)?|katilimci(?:lar|lara)?)\s+(?:icin(?:dir)?|yonelik(?:tir)?|uygun(?:dur)?|onerilir|katilabilir)|icin uygundur)/gu)) add(m, Number(m[1]));
+  for (const m of text.matchAll(/\b(\d{1,3})\s+yas\s+(?:ve uzeri|ustu)\b/gu)) add(m, Number(m[1]));
   for (const m of text.matchAll(/\b(?:suitable|recommended|intended) for\s+(?:children\s+)?(?:aged?\s+)?(\d{1,3})\s*(?:\+|and (?:over|up)|or older)/gu)) add(m, Number(m[1]));
   for (const m of text.matchAll(/(?:^|[.!?;\n]\s*|\bage (?:limit|policy|restriction):?\s*|\b(?:suitable|recommended|open) (?:for|to)\s+)all ages\b/gu)) add(m, 0);
   for (const m of text.matchAll(/\b(?:her yas(?:tan izleyicilere)?(?: icin)? uygundur|yas siniri (?:yoktur|yok|bulunmamaktadir))\b/gu)) add(m, 0);
