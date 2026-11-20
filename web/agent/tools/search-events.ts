@@ -12,7 +12,12 @@ import type {
   Order,
   Plan,
 } from '../../parser/contract.ts';
-import { DISTRICTS, fold, NEIGHBORHOODS } from '../../parser/lexicon.ts';
+import {
+  DISTRICTS,
+  fold,
+  NEIGHBORHOODS,
+  TOPIC_TERMS,
+} from '../../parser/lexicon.ts';
 import { placeOf } from '../../../contracts/location.ts';
 import { eventCard, eventFacts, type AgentEventCard } from '../cards.ts';
 
@@ -54,7 +59,10 @@ const placeValues = [
 const date = z.string().regex(/^\d{4}-\d{2}-\d{2}$/u);
 const time = z.string().regex(/^(?:[01]\d|2[0-3]):[0-5]\d$/u);
 const places = z.array(z.enum(placeValues)).min(1).max(8);
-const categories = z.array(z.enum(categoryValues)).min(1).max(categoryValues.length);
+const categories = z
+  .array(z.enum(categoryValues))
+  .min(1)
+  .max(categoryValues.length);
 const topics = z.array(z.string().trim().min(1).max(80)).min(1).max(8);
 
 export const searchEventsParameters = z.object({
@@ -64,34 +72,69 @@ export const searchEventsParameters = z.object({
     .min(1)
     .max(MAX_REQUEST_CHARS)
     .describe(
-      'One complete, self-contained event request in the user\'s language. ' +
+      "One complete, self-contained event request in the user's language. " +
         'Include every condition from the conversation that still applies: dates, ' +
         'times, districts or side, budget, categories, exclusions, ages, group.',
     ),
-  dateFrom: date.optional().describe('First Istanbul calendar date, YYYY-MM-DD.'),
+  dateFrom: date
+    .optional()
+    .describe('First Istanbul calendar date, YYYY-MM-DD.'),
   dateTo: date.optional().describe('Last Istanbul calendar date, YYYY-MM-DD.'),
   timeFrom: time.optional().describe('Earliest Istanbul start time, HH:MM.'),
   timeTo: time.optional().describe('Latest Istanbul start time, HH:MM.'),
-  timeFromExclusive: z.boolean().optional().describe('True only when the start must be after timeFrom.'),
-  timeToExclusive: z.boolean().optional().describe('True only when the start must be before timeTo.'),
-  places: places.optional().describe(
-    'Accepted Istanbul districts, neighborhoods, or side: "avrupa" or "anadolu". Several values mean OR.',
-  ),
-  excludePlaces: places.optional().describe('Istanbul places that must not match.'),
-  categories: categories.optional().describe('Accepted event categories. Several values mean OR.'),
-  excludeCategories: categories.optional().describe('Event categories that must not match.'),
-  topics: topics.optional().describe('Named genres or topics. Several values mean OR.'),
-  excludeTopics: topics.optional().describe('Named genres or topics that must not match.'),
-  maxPrice: z.number().nonnegative().max(1_000_000).optional().describe('Maximum price in TRY.'),
-  maxPriceExclusive: z.boolean().optional().describe('True only when an event at exactly maxPrice is too expensive.'),
+  timeFromExclusive: z
+    .boolean()
+    .optional()
+    .describe('True only when the start must be after timeFrom.'),
+  timeToExclusive: z
+    .boolean()
+    .optional()
+    .describe('True only when the start must be before timeTo.'),
+  places: places
+    .optional()
+    .describe(
+      'Accepted Istanbul districts, neighborhoods, or side: "avrupa" or "anadolu". Several values mean OR.',
+    ),
+  excludePlaces: places
+    .optional()
+    .describe('Istanbul places that must not match.'),
+  categories: categories
+    .optional()
+    .describe('Accepted event categories. Several values mean OR.'),
+  excludeCategories: categories
+    .optional()
+    .describe('Event categories that must not match.'),
+  topics: topics
+    .optional()
+    .describe('Named genres or topics. Several values mean OR.'),
+  excludeTopics: topics
+    .optional()
+    .describe('Named genres or topics that must not match.'),
+  maxPrice: z
+    .number()
+    .nonnegative()
+    .max(1_000_000)
+    .optional()
+    .describe('Maximum price in TRY.'),
+  maxPriceExclusive: z
+    .boolean()
+    .optional()
+    .describe('True only when an event at exactly maxPrice is too expensive.'),
   budgetBasis: z.enum(['per_person', 'per_ticket', 'group_total']).optional(),
   partySize: z.number().int().min(1).max(50).optional(),
   audience: z.enum(['children', 'family', 'adults']).optional(),
-  attendeeAges: z.array(z.number().int().min(0).max(120)).min(1).max(20).optional(),
+  attendeeAges: z
+    .array(z.number().int().min(0).max(120))
+    .min(1)
+    .max(20)
+    .optional(),
   order: z.enum(['none', 'soonest', 'cheapest']).optional(),
 });
 
-export type SearchEventSlots = Omit<z.infer<typeof searchEventsParameters>, 'request'>;
+export type SearchEventSlots = Omit<
+  z.infer<typeof searchEventsParameters>,
+  'request'
+>;
 export type SlotValidationReason =
   | 'invalid_date'
   | 'past_date'
@@ -115,7 +158,16 @@ const any = (children: Condition[]): Condition =>
   children.length === 1 ? children[0] : { type: 'any', children };
 const not = (child: Condition): Condition => ({ type: 'not', child });
 const canonicalDistricts = new Map(DISTRICTS.map((name) => [fold(name), name]));
-const canonicalNeighborhoods = new Map(NEIGHBORHOODS.map((name) => [fold(name), name]));
+const canonicalNeighborhoods = new Map(
+  NEIGHBORHOODS.map((name) => [fold(name), name]),
+);
+const canonicalTopics = new Map(
+  Object.entries(TOPIC_TERMS).flatMap(([canonical, terms]) =>
+    [canonical, ...terms].map(
+      (term) => [fold(term).trim(), canonical] as const,
+    ),
+  ),
+);
 
 function istanbulDate(now: Date) {
   return new Intl.DateTimeFormat('en-CA', {
@@ -135,20 +187,30 @@ function addDays(day: string, days: number) {
 function validCalendarDate(value: string) {
   if (!/^\d{4}-\d{2}-\d{2}$/u.test(value)) return false;
   const parsed = new Date(`${value}T12:00:00Z`);
-  return !Number.isNaN(parsed.getTime()) && parsed.toISOString().slice(0, 10) === value;
+  return (
+    !Number.isNaN(parsed.getTime()) &&
+    parsed.toISOString().slice(0, 10) === value
+  );
 }
 
-function locationAtom(name: string): Extract<Atom, { kind: 'location' }> | null {
+function locationAtom(
+  name: string,
+): Extract<Atom, { kind: 'location' }> | null {
   const folded = fold(name).trim();
-  if (folded === 'anadolu') return { kind: 'location', name: 'Anadolu yakası', precision: 'side' };
-  if (folded === 'avrupa') return { kind: 'location', name: 'Avrupa yakası', precision: 'side' };
+  if (folded === 'anadolu')
+    return { kind: 'location', name: 'Anadolu yakası', precision: 'side' };
+  if (folded === 'avrupa')
+    return { kind: 'location', name: 'Avrupa yakası', precision: 'side' };
   const district = canonicalDistricts.get(folded);
-  if (district) return { kind: 'location', name: district, precision: 'district' };
+  if (district)
+    return { kind: 'location', name: district, precision: 'district' };
   const neighborhood = canonicalNeighborhoods.get(folded);
   const place = neighborhood ? placeOf(fold(neighborhood).trim()) : null;
   if (place?.district) {
     const parent = canonicalDistricts.get(place.district);
-    return parent ? { kind: 'location', name: parent, precision: 'district' } : null;
+    return parent
+      ? { kind: 'location', name: parent, precision: 'district' }
+      : null;
   }
   if (place?.side)
     return {
@@ -162,21 +224,45 @@ function locationAtom(name: string): Extract<Atom, { kind: 'location' }> | null 
 function locationConditions(values: readonly string[]) {
   const locations = values.map(locationAtom);
   if (locations.some((value) => value === null)) return null;
-  const unique = [...new Map(locations.map((value) => [JSON.stringify(value), value!])).values()];
+  const unique = [
+    ...new Map(
+      locations.map((value) => [JSON.stringify(value), value!]),
+    ).values(),
+  ];
   return unique.map(atom);
 }
 
 function categoryConditions(values: readonly string[]) {
-  if (values.some((value) => !categoryValues.includes(value as Category))) return null;
-  return [...new Set(values)].map((value) => atom({ kind: 'category', value: value as Category }));
+  if (values.some((value) => !categoryValues.includes(value as Category)))
+    return null;
+  return [...new Set(values)].map((value) =>
+    atom({ kind: 'category', value: value as Category }),
+  );
+}
+
+function topicConditions(values: readonly string[]) {
+  const canonical = values.map((value) => {
+    const trimmed = value.trim();
+    return canonicalTopics.get(fold(trimmed).trim()) ?? trimmed;
+  });
+  return [...new Set(canonical)].map((value) => atom({ kind: 'topic', value }));
 }
 
 /** Converts Gemini slots to the same validated Plan used by the parser path. */
-export function slotsToPlan(slots: SearchEventSlots, now = new Date()): SlotPlanResult {
+export function slotsToPlan(
+  slots: SearchEventSlots,
+  now = new Date(),
+): SlotPlanResult {
   const hard: Condition[] = [];
-  if ((slots.timeFromExclusive && !slots.timeFrom) || (slots.timeToExclusive && !slots.timeTo))
+  if (
+    (slots.timeFromExclusive && !slots.timeFrom) ||
+    (slots.timeToExclusive && !slots.timeTo)
+  )
     return { status: 'needs_input', reason: 'invalid_time_range' };
-  if (slots.maxPrice === undefined && (slots.maxPriceExclusive || slots.budgetBasis))
+  if (
+    slots.maxPrice === undefined &&
+    (slots.maxPriceExclusive || slots.budgetBasis)
+  )
     return { status: 'needs_input', reason: 'invalid_budget' };
   const from = slots.dateFrom ?? slots.dateTo;
   const to = slots.dateTo ?? slots.dateFrom;
@@ -184,20 +270,31 @@ export function slotsToPlan(slots: SearchEventSlots, now = new Date()): SlotPlan
     if (!validCalendarDate(from) || !validCalendarDate(to))
       return { status: 'needs_input', reason: 'invalid_date' };
     const today = istanbulDate(now);
-    if (from < today || to < today) return { status: 'needs_input', reason: 'past_date' };
+    if (from < today || to < today)
+      return { status: 'needs_input', reason: 'past_date' };
     if (from > addDays(today, 119) || to > addDays(today, 119))
       return { status: 'needs_input', reason: 'date_out_of_range' };
-    if (from > to) return { status: 'needs_input', reason: 'invalid_date_range' };
+    if (from > to)
+      return { status: 'needs_input', reason: 'invalid_date_range' };
     hard.push(atom({ kind: 'date', from, to }));
   }
   if (slots.timeFrom && slots.timeTo && slots.timeFrom > slots.timeTo)
     return { status: 'needs_input', reason: 'invalid_time_range' };
   if (slots.timeFrom || slots.timeTo)
-    hard.push(atom({
-      kind: 'time',
-      ...(slots.timeFrom ? { from: slots.timeFrom, fromExclusive: slots.timeFromExclusive ?? false } : {}),
-      ...(slots.timeTo ? { to: slots.timeTo, toExclusive: slots.timeToExclusive ?? false } : {}),
-    }));
+    hard.push(
+      atom({
+        kind: 'time',
+        ...(slots.timeFrom
+          ? {
+              from: slots.timeFrom,
+              fromExclusive: slots.timeFromExclusive ?? false,
+            }
+          : {}),
+        ...(slots.timeTo
+          ? { to: slots.timeTo, toExclusive: slots.timeToExclusive ?? false }
+          : {}),
+      }),
+    );
 
   if (slots.places) {
     const conditions = locationConditions(slots.places);
@@ -211,33 +308,51 @@ export function slotsToPlan(slots: SearchEventSlots, now = new Date()): SlotPlan
   }
   if (slots.categories) {
     const conditions = categoryConditions(slots.categories);
-    if (!conditions) return { status: 'needs_input', reason: 'unknown_category' };
+    if (!conditions)
+      return { status: 'needs_input', reason: 'unknown_category' };
     hard.push(any(conditions));
   }
   if (slots.excludeCategories) {
     const conditions = categoryConditions(slots.excludeCategories);
-    if (!conditions) return { status: 'needs_input', reason: 'unknown_category' };
+    if (!conditions)
+      return { status: 'needs_input', reason: 'unknown_category' };
     hard.push(...conditions.map(not));
   }
-  if (slots.topics) hard.push(any([...new Set(slots.topics)].map((value) => atom({ kind: 'topic', value }))));
-  if (slots.excludeTopics) hard.push(...[...new Set(slots.excludeTopics)].map((value) => not(atom({ kind: 'topic', value }))));
+  if (slots.topics) hard.push(any(topicConditions(slots.topics)));
+  if (slots.excludeTopics)
+    hard.push(...topicConditions(slots.excludeTopics).map(not));
   if (slots.maxPrice !== undefined) {
-    if (!slots.budgetBasis) return { status: 'needs_input', reason: 'budget_basis_required' };
-    if (slots.budgetBasis === 'group_total' && !slots.partySize)
+    if (slots.maxPrice === 0 && slots.maxPriceExclusive)
+      return { status: 'needs_input', reason: 'invalid_budget' };
+    const basis =
+      slots.budgetBasis ?? (slots.maxPrice === 0 ? 'per_person' : undefined);
+    if (!basis)
+      return { status: 'needs_input', reason: 'budget_basis_required' };
+    if (basis === 'group_total' && !slots.partySize)
       return { status: 'needs_input', reason: 'party_size_required' };
-    if (slots.partySize) hard.push(atom({ kind: 'party', count: slots.partySize }));
-    hard.push(atom({
-      kind: 'budget',
-      comparison: slots.maxPriceExclusive ? 'lt' : 'lte',
-      amount: slots.maxPrice,
-      currency: 'TRY',
-      basis: slots.budgetBasis as BudgetBasis,
-    }));
-  } else if (slots.partySize) hard.push(atom({ kind: 'party', count: slots.partySize }));
-  if (slots.audience === 'children') hard.push(atom({ kind: 'companion', value: 'children' }));
-  if (slots.audience === 'family') hard.push(atom({ kind: 'companion', value: 'family' }));
-  if (slots.audience === 'adults') hard.push(atom({ kind: 'age', years: 18 }));
-  for (const years of slots.attendeeAges ?? []) hard.push(atom({ kind: 'age', years }));
+    if (slots.partySize)
+      hard.push(atom({ kind: 'party', count: slots.partySize }));
+    hard.push(
+      atom({
+        kind: 'budget',
+        comparison: slots.maxPriceExclusive ? 'lt' : 'lte',
+        amount: slots.maxPrice,
+        currency: 'TRY',
+        basis: basis as BudgetBasis,
+      }),
+    );
+  } else if (slots.partySize)
+    hard.push(atom({ kind: 'party', count: slots.partySize }));
+  if (slots.audience === 'children')
+    hard.push(atom({ kind: 'companion', value: 'children' }));
+  if (slots.audience === 'family')
+    hard.push(atom({ kind: 'companion', value: 'family' }));
+  if (slots.audience === 'adults') {
+    hard.push(atom({ kind: 'age', years: 18 }));
+    hard.push(not(atom({ kind: 'topic', value: 'kids' })));
+  }
+  for (const years of slots.attendeeAges ?? [])
+    hard.push(atom({ kind: 'age', years }));
 
   const plan: Plan = {
     hard: { type: 'all', children: hard },
@@ -266,11 +381,20 @@ export function childAudienceRequested(request: string) {
 /** Code guard: a request for children never returns sessions that the source limits to older people. */
 const CHILD_AGE = 10;
 
-export function searchEventsResult(result: SearchResult, request = '', structuredChildAudience = false) {
-  const forChildren = structuredChildAudience || childAudienceRequested(request);
+export function searchEventsResult(
+  result: SearchResult,
+  request = '',
+  structuredChildAudience = false,
+) {
+  const forChildren =
+    structuredChildAudience || childAudienceRequested(request);
   const events: EventRecord[] = result.recommendations
     .map((recommendation) => recommendation.event)
-    .filter((event) => !forChildren || checkAgeEvidence(event, CHILD_AGE).status !== 'contradicted')
+    .filter(
+      (event) =>
+        !forChildren ||
+        checkAgeEvidence(event, CHILD_AGE).status !== 'contradicted',
+    )
     .slice(0, MAX_SEARCH_RESULTS);
   return {
     events,
@@ -278,9 +402,13 @@ export function searchEventsResult(result: SearchResult, request = '', structure
       status: result.status,
       reason:
         result.pendingInput?.reason ??
-        (result.status === 'unsupported_location' ? 'unsupported_location' : null),
+        (result.status === 'unsupported_location'
+          ? 'unsupported_location'
+          : null),
       totalCandidates: result.totalCandidates,
-      ...(forChildren ? { ageGuard: 'removed sessions with an age limit above children' } : {}),
+      ...(forChildren
+        ? { ageGuard: 'removed sessions with an age limit above children' }
+        : {}),
       events: events.map(eventFacts),
     },
   };
@@ -300,9 +428,19 @@ export function createSearchEventsTool(deps: SearchEventsDeps) {
       if (hasStructuredSlots(slots)) {
         const converted = slotsToPlan(slots, deps.now?.() ?? new Date());
         if (converted.status === 'needs_input')
-          return { status: 'needs_input', reason: converted.reason, totalCandidates: 0, events: [] };
+          return {
+            status: 'needs_input',
+            reason: converted.reason,
+            totalCandidates: 0,
+            events: [],
+          };
         if (!deps.searchPlan)
-          return { status: 'needs_input', reason: 'structured_search_unavailable', totalCandidates: 0, events: [] };
+          return {
+            status: 'needs_input',
+            reason: 'structured_search_unavailable',
+            totalCandidates: 0,
+            events: [],
+          };
         result = await deps.searchPlan(request, converted.plan);
       } else {
         result = await deps.search(request);
@@ -311,7 +449,11 @@ export function createSearchEventsTool(deps: SearchEventsDeps) {
         slots.audience === 'children' ||
         slots.audience === 'family' ||
         slots.attendeeAges?.some((age) => age < 18) === true;
-      const { events, response } = searchEventsResult(result, request, structuredChildAudience);
+      const { events, response } = searchEventsResult(
+        result,
+        request,
+        structuredChildAudience,
+      );
       deps.showCards(events.map(eventCard));
       return response;
     },

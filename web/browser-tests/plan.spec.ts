@@ -19,10 +19,13 @@ const card = {
   offers: [],
 };
 
-const ndjson = (events: unknown[]) => events.map((event) => JSON.stringify(event)).join('\n') + '\n';
+const ndjson = (events: unknown[]) =>
+  events.map((event) => JSON.stringify(event)).join('\n') + '\n';
 
 test.describe('plan assistant', () => {
-  test('streams tool status, text and cards from tool results', async ({ page }) => {
+  test('streams tool status, text and cards from tool results', async ({
+    page,
+  }) => {
     const bodies: unknown[] = [];
     await page.route('**/api/agent', async (route) => {
       bodies.push(route.request().postDataJSON());
@@ -40,11 +43,18 @@ test.describe('plan assistant', () => {
     await page.goto('/plan');
     await page.getByLabel('Mesajın').fill('Cumartesi Kadıköy konser');
     await page.getByRole('button', { name: 'Gönder' }).click();
-    await expect(page.getByText('Gece Cazı cumartesi akşamı için uygun.')).toBeVisible();
+    await expect(
+      page.getByText('Gece Cazı cumartesi akşamı için uygun.'),
+    ).toBeVisible();
     await expect(page.getByText('Etkinlikler aranıyor')).toBeVisible();
-    await expect(page.getByRole('heading', { name: 'Gece Cazı' })).toBeVisible();
+    await expect(
+      page.getByRole('heading', { name: 'Gece Cazı' }),
+    ).toBeVisible();
     await expect(page.getByText(/Kontrol edildi: 2 Eki/)).toBeVisible();
-    await expect(page.getByRole('link', { name: /Bubilet/ })).toHaveAttribute('href', card.url);
+    await expect(page.getByRole('link', { name: /Bubilet/ })).toHaveAttribute(
+      'href',
+      card.url,
+    );
 
     await page.getByLabel('Mesajın').fill('daha ucuz olsun');
     await page.keyboard.press('Enter');
@@ -54,7 +64,9 @@ test.describe('plan assistant', () => {
     expect(second.message).toBe('daha ucuz olsun');
   });
 
-  test('shows a clear message when the assistant is not configured', async ({ page }) => {
+  test('shows a clear message when the assistant is not configured', async ({
+    page,
+  }) => {
     await page.route('**/api/agent', (route) =>
       route.fulfill({
         status: 503,
@@ -65,14 +77,18 @@ test.describe('plan assistant', () => {
     await page.goto('/plan');
     await page.getByLabel('Mesajın').fill('konser');
     await page.getByRole('button', { name: 'Gönder' }).click();
-    await expect(page.getByRole('alert')).toHaveText('Asistan henüz yapılandırılmadı.');
+    await expect(page.getByRole('alert')).toHaveText(
+      'Asistan henüz yapılandırılmadı.',
+    );
     await expect(page.getByLabel('Mesajın')).toBeEnabled();
   });
 
   test('a new conversation uses a new session', async ({ page }) => {
     const sessions: string[] = [];
     await page.route('**/api/agent', async (route) => {
-      sessions.push((route.request().postDataJSON() as { sessionId: string }).sessionId);
+      sessions.push(
+        (route.request().postDataJSON() as { sessionId: string }).sessionId,
+      );
       await route.fulfill({
         status: 200,
         contentType: 'application/x-ndjson',
@@ -89,5 +105,61 @@ test.describe('plan assistant', () => {
     await page.keyboard.press('Enter');
     await expect.poll(() => sessions.length).toBe(2);
     expect(sessions[1]).not.toBe(sessions[0]);
+  });
+
+  test('renders safe assistant Markdown and English tool status', async ({
+    page,
+  }) => {
+    await page.route('**/api/agent', (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: 'application/x-ndjson',
+        body: ndjson([
+          { type: 'tool', name: 'search_events' },
+          {
+            type: 'text',
+            text: '**Good options**\n* First event\n* Second event\n\n<script>alert(1)</script> <b>unsafe</b>',
+          },
+          { type: 'done' },
+        ]),
+      }),
+    );
+    await page.goto('/plan');
+    await page.getByLabel('Mesajın').fill('Find jazz events');
+    await page.getByRole('button', { name: 'Gönder' }).click();
+
+    const answer = page.locator('.agent-turn-assistant');
+    await expect(answer.getByText('Searching events')).toBeVisible();
+    await expect(answer.locator('strong')).toHaveText('Good options');
+    await expect(answer.locator('li')).toHaveCount(2);
+    await expect(answer).toContainText(
+      '<script>alert(1)</script> <b>unsafe</b>',
+    );
+    await expect(answer).not.toContainText('**Good options**');
+    await expect(answer.locator('script, b')).toHaveCount(0);
+  });
+
+  test('keeps the plan link visible on a narrow home page', async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.route('**/api/events', (route) =>
+      route.fulfill({
+        json: {
+          events: [],
+          total: 0,
+          aiEnabled: false,
+          catalog: { status: 'ready', stored: 0, eligible: 0 },
+        },
+      }),
+    );
+    await page.route('**/api/site', (route) =>
+      route.fulfill({ json: { donationUrl: null } }),
+    );
+    await page.goto('/');
+    const link = page.getByRole('link', { name: 'Plan asistanı' });
+    await expect(link).toBeVisible();
+    await expect(link).toHaveAttribute('href', '/plan');
+    await expect(link).toBeInViewport();
   });
 });

@@ -47,8 +47,10 @@ export default async function handler(request, response) {
           upstreamResponse.headers,
         );
         upstreamResponse.on('error', reject);
+        response.on('finish', resolve);
+        response.on('close', resolve);
+        response.on('error', reject);
         upstreamResponse.pipe(response);
-        upstreamResponse.on('end', resolve);
       },
     );
     upstream.on('error', reject);

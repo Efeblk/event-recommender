@@ -12,10 +12,16 @@ import { checkAgeEvidence } from './age-evidence.ts';
 import { sourceTimeIsDoorsOnly } from '../../contracts/timing.ts';
 
 const istanbulDay = new Intl.DateTimeFormat('en-CA', {
-  timeZone: 'Europe/Istanbul', year: 'numeric', month: '2-digit', day: '2-digit',
+  timeZone: 'Europe/Istanbul',
+  year: 'numeric',
+  month: '2-digit',
+  day: '2-digit',
 });
 const istanbulClock = new Intl.DateTimeFormat('en-GB', {
-  timeZone: 'Europe/Istanbul', hour: '2-digit', minute: '2-digit', hourCycle: 'h23',
+  timeZone: 'Europe/Istanbul',
+  hour: '2-digit',
+  minute: '2-digit',
+  hourCycle: 'h23',
 });
 
 export type PlanEvidenceStatus = RequirementStatus;
@@ -84,7 +90,11 @@ const specialTopicTerms: Record<string, string[]> = {
 function topicPattern(value: string): RegExp {
   let pattern = topicPatterns.get(value);
   if (!pattern) {
-    const surfaces = [...(TOPIC_TERMS[value] ?? []), ...(specialTopicTerms[value] ?? []), value]
+    const surfaces = [
+      ...(TOPIC_TERMS[value] ?? []),
+      ...(specialTopicTerms[value] ?? []),
+      value,
+    ]
       .map((term) => normalize(term).trim())
       .filter(Boolean);
     pattern = new RegExp(
@@ -111,7 +121,8 @@ const experiencePredicates: Record<
   family_friendly: { kind: 'audience', value: 'family_friendly' },
   wheelchair_accessible: { kind: 'accessibility', value: 'step_free' },
 };
-const OPEN_AIR = /\b(?:acik ?hava(?:da)?|open[- ]air|amfi ?tiyatro|amfi|amphitheat(?:re|er))\b/u;
+const OPEN_AIR =
+  /\b(?:acik ?hava(?:da)?|open[- ]air|amfi ?tiyatro|amfi|amphitheat(?:re|er))\b/u;
 const result = (status: PlanEvidenceStatus, evidence: string[] = []) => ({
   status,
   evidence,
@@ -124,48 +135,80 @@ const labelEvidence = (...texts: Array<string | undefined>) =>
   texts.filter((text): text is string => Boolean(text));
 
 /** A child attends: children, family and child-age requests (R4 labels). */
-function childAudience(event: EventRecord, companion: 'children' | 'family' = 'children') {
+function childAudience(
+  event: EventRecord,
+  companion: 'children' | 'family' = 'children',
+) {
   const labels = event.labels;
   if (!labels) {
     const checks = [
-      checkPredicateEvidence(event, 'audience', companion === 'children' ? 'children' : 'family_friendly'),
+      checkPredicateEvidence(
+        event,
+        'audience',
+        companion === 'children' ? 'children' : 'family_friendly',
+      ),
       ...(companion === 'family'
         ? [checkPredicateEvidence(event, 'audience', 'children')]
         : []),
     ];
     const supported = checks.find((check) => check.status === 'supported');
     if (supported) return result('supported', supported.evidence);
-    const contradicted = checks.find((check) => check.status === 'contradicted');
-    return result(contradicted ? 'contradicted' : 'unknown', contradicted?.evidence ?? []);
+    const contradicted = checks.find(
+      (check) => check.status === 'contradicted',
+    );
+    return result(
+      contradicted ? 'contradicted' : 'unknown',
+      contradicted?.evidence ?? [],
+    );
   }
   const evidence = labelEvidence(labels.evidence.audience, labels.evidence.age);
-  if (labels.audience === 'adult_only' || (labels.minAge !== null && labels.minAge >= 13))
+  if (
+    labels.audience === 'adult_only' ||
+    (labels.minAge !== null && labels.minAge >= 13)
+  )
     return result('contradicted', evidence);
   if (labels.audience === 'children' || labels.audience === 'family')
     return result('supported', evidence);
   // A general event that states a child age rule ("6 yaş ve üzeri") admits children.
-  if ((labels.minAge !== null && labels.minAge <= 10) || labels.childSuitable >= CHILD_SUITABLE)
-    return result('supported', evidence.length ? evidence : [`child-suitable ${labels.childSuitable.toFixed(2)}`]);
+  if (
+    (labels.minAge !== null && labels.minAge <= 10) ||
+    labels.childSuitable >= CHILD_SUITABLE
+  )
+    return result(
+      'supported',
+      evidence.length
+        ? evidence
+        : [`child-suitable ${labels.childSuitable.toFixed(2)}`],
+    );
   if (labels.childSuitable <= CHILD_UNSUITABLE)
-    return result('contradicted', [`child-suitable ${labels.childSuitable.toFixed(2)}`]);
+    return result('contradicted', [
+      `child-suitable ${labels.childSuitable.toFixed(2)}`,
+    ]);
   return result('unknown', evidence);
 }
 
 function ageResult(event: EventRecord, years: number) {
   const labels = event.labels;
+  if (years >= 13 && labels?.audience === 'children')
+    return result('contradicted', labelEvidence(labels.evidence.audience));
   if (labels && (labels.minAge !== null || labels.maxAge !== null))
     return result(
-      (labels.minAge ?? 0) <= years && years <= (labels.maxAge ?? 120) ? 'supported' : 'contradicted',
+      (labels.minAge ?? 0) <= years && years <= (labels.maxAge ?? 120)
+        ? 'supported'
+        : 'contradicted',
       labelEvidence(labels.evidence.age),
     );
   if (labels?.audience === 'adult_only' && years < 18)
     return result('contradicted', labelEvidence(labels.evidence.audience));
   const stated = checkAgeEvidence(event, years);
-  if (stated.status !== 'unknown' || stated.evidence.length || !labels) return stated;
+  if (stated.status !== 'unknown' || stated.evidence.length || !labels)
+    return stated;
   // No stated age rule: a child needs a child-suitable event; an adult needs
   // an event that is not made for children.
   if (years < 13) return childAudience(event);
-  return labels.audience === 'general' || labels.audience === 'family' || labels.audience === 'adult_only'
+  return labels.audience === 'general' ||
+    labels.audience === 'family' ||
+    labels.audience === 'adult_only'
     ? result('supported', labelEvidence(labels.evidence.audience))
     : result('unknown');
 }
@@ -179,8 +222,10 @@ function atomResult(
   switch (atom.kind) {
     case 'category': {
       // The provider label and the collection-time label are both evidence.
-      const labels = [event.category, event.labels?.category]
-        .filter((label): label is Category => canonicalCategories.has(label as Category));
+      const labels = [event.category, event.labels?.category].filter(
+        (label): label is Category =>
+          canonicalCategories.has(label as Category),
+      );
       return result(
         !labels.length
           ? 'unknown'
@@ -192,8 +237,12 @@ function atomResult(
     }
     case 'date': {
       if (event.attendanceTiming?.kind === 'admission_window') {
-        const from = istanbulDay.format(new Date(event.attendanceTiming.validFrom));
-        const to = istanbulDay.format(new Date(event.attendanceTiming.validThrough));
+        const from = istanbulDay.format(
+          new Date(event.attendanceTiming.validFrom),
+        );
+        const to = istanbulDay.format(
+          new Date(event.attendanceTiming.validThrough),
+        );
         return result(
           to >= atom.from && from <= atom.to ? 'supported' : 'contradicted',
           [`${from}–${to}`],
@@ -208,7 +257,8 @@ function atomResult(
     case 'time': {
       if (
         sourceTimeIsDoorsOnly(event.description) ||
-        (event.attendanceTiming && event.attendanceTiming.kind !== 'timed_session')
+        (event.attendanceTiming &&
+          event.attendanceTiming.kind !== 'timed_session')
       )
         return result('unknown');
       const time = istanbulClock.format(new Date(event.startsAt));
@@ -243,7 +293,10 @@ function atomResult(
     case 'location': {
       const place = event.labels?.place;
       if (place === 'other_city' || place === 'online')
-        return result('contradicted', labelEvidence(place, event.labels?.evidence.place));
+        return result(
+          'contradicted',
+          labelEvidence(place, event.labels?.evidence.place),
+        );
       if (atom.precision === 'neighborhood') return result('unknown');
       if (atom.precision === 'side') {
         const wanted = sideNamed(normalize(atom.name));
@@ -269,7 +322,9 @@ function atomResult(
       const labeled = event.labels?.district;
       if (labeled)
         return result(
-          normalize(labeled) === normalize(atom.name) ? 'supported' : 'contradicted',
+          normalize(labeled) === normalize(atom.name)
+            ? 'supported'
+            : 'contradicted',
           labelEvidence(labeled, event.labels?.evidence.place),
         );
       return result('unknown', event.district ? [event.district] : []);
@@ -279,18 +334,27 @@ function atomResult(
         // "müzikal" is also an ordinary adjective in descriptions ("müzikal bir
         // yolculuk"); a musical names itself in its title or category.
         const text = normalize(
-          [event.title, atom.value === 'musical' ? '' : event.description, event.sourceCategory]
+          [
+            event.title,
+            atom.value === 'musical' ? '' : event.description,
+            event.sourceCategory,
+          ]
             .filter(Boolean)
             .join('. '),
         );
         const pattern = topicPattern(atom.value);
-        const dancingCue = atom.value !== 'dancing'
-          || /(?<![\p{L}\p{N}])(?:dj|eglence|parti|party)(?![\p{L}\p{N}])/u.test(text);
-        const evidence = (dancingCue ? text
-          .split(/(?<=[.!?])\s+/u)
-          .filter((part) => pattern.test(part))
-          .slice(0, 3)
-          .map((part) => part.slice(0, 240)) : []);
+        const dancingCue =
+          atom.value !== 'dancing' ||
+          /(?<![\p{L}\p{N}])(?:dj|eglence|parti|party)(?![\p{L}\p{N}])/u.test(
+            text,
+          );
+        const evidence = dancingCue
+          ? text
+              .split(/(?<=[.!?])\s+/u)
+              .filter((part) => pattern.test(part))
+              .slice(0, 3)
+              .map((part) => part.slice(0, 240))
+          : [];
         return result(evidence.length ? 'supported' : 'unknown', evidence);
       }
       const check = checkPredicateEvidence(event, 'genre', atom.value);
@@ -305,8 +369,14 @@ function atomResult(
           .filter((part) => OPEN_AIR.test(normalize(part)))
           .slice(0, 3)
           .map((part) => part.slice(0, 240));
-        if (!evidence.length && (event.labels?.formats.outdoor ?? 0) >= LABEL_SUPPORT)
-          return result('supported', labelEvidence(event.labels!.evidence.format, 'labeled outdoor'));
+        if (
+          !evidence.length &&
+          (event.labels?.formats.outdoor ?? 0) >= LABEL_SUPPORT
+        )
+          return result(
+            'supported',
+            labelEvidence(event.labels!.evidence.format, 'labeled outdoor'),
+          );
         return result(evidence.length ? 'supported' : 'unknown', evidence);
       }
       const predicate = experiencePredicates[atom.value];
@@ -316,8 +386,15 @@ function atomResult(
         predicate.kind,
         predicate.value,
       );
-      if (atom.value === 'seated' && check.status === 'unknown' && (event.labels?.formats.seated ?? 0) >= LABEL_SUPPORT)
-        return result('supported', labelEvidence(event.labels!.evidence.format, 'labeled seated'));
+      if (
+        atom.value === 'seated' &&
+        check.status === 'unknown' &&
+        (event.labels?.formats.seated ?? 0) >= LABEL_SUPPORT
+      )
+        return result(
+          'supported',
+          labelEvidence(event.labels!.evidence.format, 'labeled seated'),
+        );
       return result(check.status, check.evidence);
     }
     case 'content': {
@@ -351,9 +428,13 @@ function evaluate(
 ): PlanEvidence {
   if (condition.type === 'atom') {
     const atom = atomResult(event, condition.atom, now, partyCount);
-    const status = negated && condition.atom.kind === 'topic' && atom.status === 'unknown' && atom.evidence.length === 0
-      ? 'contradicted'
-      : atom.status;
+    const status =
+      negated &&
+      condition.atom.kind === 'topic' &&
+      atom.status === 'unknown' &&
+      atom.evidence.length === 0
+        ? 'contradicted'
+        : atom.status;
     return {
       type: 'atom',
       atom: condition.atom,
@@ -366,7 +447,8 @@ function evaluate(
     // Topic absence is meaningful anywhere under negative polarity. Each NOT
     // toggles that polarity, so double negation keeps positive-topic semantics.
     const child = evaluate(event, condition.child, now, partyCount, !negated);
-    const status = child.status === 'unknown'
+    const status =
+      child.status === 'unknown'
         ? 'unknown'
         : child.status === 'supported'
           ? 'contradicted'
@@ -434,7 +516,9 @@ export function validateSearchPlan(plan: Plan): void {
     if (condition.type === 'atom') {
       const atom = condition.atom;
       if (hard && atom.kind === 'mood')
-        throw new Error('moods are ranking preferences, not verified venue properties');
+        throw new Error(
+          'moods are ranking preferences, not verified venue properties',
+        );
       if (
         hard &&
         (atom.kind === 'party' || atom.kind === 'companion') &&
