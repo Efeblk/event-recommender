@@ -192,6 +192,11 @@ and English, plan an evening and save it. The final demo runs on that URL.
 - "Dj Çetinkol ile 90’lar 2000’ler Türkçe Pop Gecesi" and "Dj Çetinkolla
   90’lar 00’ler Türkçe Pop Partisi" at Dorock XL Kadıköy on 21 Nov may be one
   event on two providers. Check the sources and the identity rules.
+- A mood request without a type ("Kadıköyde eğlenceli bişiler bul") still
+  ranks children's workshops and children's theatre high in the live demo.
+  The scripted replay ranks adult options first.
+- A budget without a basis ("500 TL altı") makes the agent ask per person,
+  per ticket or total before it searches. Check if one default is safe.
 
 ## Status log
 
@@ -264,3 +269,14 @@ and English, plan an evening and save it. The final demo runs on that URL.
   with no hard-condition violation, duplicate card or invented event.
   This is not a live Gemini result. Offline source review used the bundled
   catalog for the five new cases. Live Gemini and Vercel were not tested.
+- 2026-11-20: PR #32 (`9f17cfd`) deployed to Vercel production after live
+  Gemini tests on a preview deployment. Results: "Kadkıköyde konser" (typo)
+  returns 10 Kadıköy concerts; before, it dropped the place. "Anadolu
+  yakasında bale" returns no cards; the catalog has no dance events on that
+  side. "Kadıköy veya Beşiktaş'ta bu hafta sonu konser, 500 TL altı" makes one
+  search_events call and asks for the budget basis; after "kişi başı" it
+  returns 6 Saturday events at or below 500 TL in Kadıköy or Beşiktaş. Live
+  production test "Kadkıköyde stand-up": 10 Kadıköy stand-up cards with
+  correct Istanbul times. Every card names a venue in the requested
+  districts. Three venue addresses were checked in `web/data/events.json`.
+  Two new issues are in the Later list.
