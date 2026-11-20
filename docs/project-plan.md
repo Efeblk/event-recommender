@@ -280,3 +280,13 @@ and English, plan an evening and save it. The final demo runs on that URL.
   correct Istanbul times. Every card names a venue in the requested
   districts. Three venue addresses were checked in `web/data/events.json`.
   Two new issues are in the Later list.
+- 2026-11-20: PR #34 (`ead1a8d`) merged after live browser and offline
+  search-flow checks. Fixes: `maxPrice: 0` (free events) no longer requires
+  `budgetBasis`; Turkish and English topic slots canonicalize via `TOPIC_TERMS`
+  (`caz` → `jazz`); `audience: "adults"` excludes children's shows; mobile
+  header keeps `/plan` visible on `<= 720px`; `/plan` renders safe React
+  Markdown, fixes sticky composer overlap, groups action buttons, keeps card
+  icons inline and localizes tool status labels; `vercel-handler.mjs` waits
+  for response flush. All 10 CI checks (6 required) passed on `bed4f9c`, with
+  887/887 web tests, 41/41 recorded agent eval, 53/53 active browser tests and
+  Vercel smoke passing. Not deployed to Vercel yet.
