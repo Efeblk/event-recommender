@@ -224,6 +224,13 @@ button:focus-visible {
   border-radius: 50%;
   flex: none;
 }
+.chat-action-buttons {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-left: auto;
+}
 .prompt-chips,
 .active-filters {
   display: flex;
@@ -527,7 +534,7 @@ button:focus-visible {
 }
 .intent-summary button:disabled {
   cursor: wait;
-  opacity: .5;
+  opacity: 0.5;
 }
 .intent-summary-row {
   margin: 10px 0 0;
@@ -805,11 +812,24 @@ footer small {
     padding: 0 18px;
   }
   .site-header {
-    height: 72px;
+    height: auto;
+    min-height: 72px;
+    padding: 12px 0;
+    flex-wrap: wrap;
+    row-gap: 8px;
     gap: 15px;
   }
   .site-header nav {
-    display: none;
+    order: 3;
+    width: 100%;
+    margin-left: 0;
+    gap: 14px;
+    justify-content: space-between;
+    overflow: hidden;
+  }
+  .site-header nav a {
+    font-size: 12px;
+    white-space: nowrap;
   }
   .brand {
     font-size: 26px;
@@ -899,7 +919,7 @@ footer small {
 .agent-page {
   max-width: 960px;
   margin: 0 auto;
-  padding: 1.5rem 1rem 3rem;
+  padding: 1.5rem 1rem 5rem;
   display: grid;
   gap: 1.25rem;
 }
@@ -915,6 +935,10 @@ footer small {
 .agent-thread {
   display: grid;
   gap: 1rem;
+  padding-bottom: 1.5rem;
+}
+.agent-thread-bottom {
+  scroll-margin-bottom: 9rem;
 }
 .agent-turn-user {
   justify-self: end;
@@ -930,6 +954,12 @@ footer small {
 }
 .agent-text {
   white-space: pre-wrap;
+}
+.agent-list {
+  display: grid;
+  gap: 0.25rem;
+  padding-left: 1.25rem;
+  list-style: disc;
 }
 .agent-pending {
   display: inline-flex;
@@ -970,6 +1000,16 @@ footer small {
   align-items: center;
   font-size: 0.8rem;
   color: var(--muted);
+}
+.agent-card-meta > span,
+.agent-card-venue {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+.agent-card-meta svg,
+.agent-card-venue svg {
+  flex-shrink: 0;
 }
 .agent-card-category {
   background: var(--accent);
