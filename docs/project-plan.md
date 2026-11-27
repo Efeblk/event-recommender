@@ -290,3 +290,10 @@ and English, plan an evening and save it. The final demo runs on that URL.
   for response flush. All 10 CI checks (6 required) passed on `bed4f9c`, with
   887/887 web tests, 41/41 recorded agent eval, 53/53 active browser tests and
   Vercel smoke passing. Not deployed to Vercel yet.
+- 2026-11-27: PR #37 and PR #22 (Dependabot) merged. `master` (`5726e5b`,
+  with PR #34 and PR #36) deployed to Vercel production. Local checks before
+  the deploy: 887/887 web tests, typecheck, lint, `build:vercel` and the
+  Vercel smoke check pass. Live checks: `/api/health` reports 2914 stored and
+  1655 eligible sessions; `/` shows the Plan assistant and `/plan` redirects
+  to `/`. No live Gemini request was sent. PR #38 stays open: CI fails because
+  the new oxlint version has no `react-compiler` rule.
